@@ -1,0 +1,11 @@
+{
+  "type": "FeatureCollection",
+  "name": "DEMO ONLY - synthetic line, NOT a real cable route",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {"name": "DEMO line near the Hong Tai 58 anchorage (synthetic)"},
+      "geometry": {"type": "LineString", "coordinates": [[119.60, 23.30], [120.17, 23.29]]}
+    }
+  ]
+}
