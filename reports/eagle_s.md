@@ -7,9 +7,9 @@ Case file with context and sources: [eagle_s.md](../cases/eagle_s.md)
 | Before the incident | 50 HIGH | 10 | 25 | 15 |
 | Full data | 55 HIGH | 10 | 25 | 20 |
 
-Pre-incident data cut-off: 2024-12-25 10:26 UTC.  
+Timestamp cut-off: 2024-12-25 10:26 UTC.<br>
 Analysis window: 2024-12-23 00:00 - 2024-12-28 23:59 UTC.  
-_Research indicators only. The score is not a probability or evidence of intent or responsibility for damage. LOW may reflect limited data. Data: Global Fishing Watch (CC BY-NC 4.0)._
+_Heuristic research indicators only. The score is not a probability or evidence of intent or responsibility for damage. LOW may reflect limited data. Overlapping rules can add points for the same event. The combined score is capped at 100; group totals are uncapped. Bundled sources: Global Fishing Watch (CC BY-NC 4.0); cable routes © OpenStreetMap contributors (ODbL); UK Sanctions List (OGL v3) via OpenSanctions (CC BY-NC 4.0)._
 
 ## Before the incident
 
@@ -17,8 +17,14 @@ Retrospective timestamp filter of the bundled snapshot. Current identity links, 
 
 - Selected AIS identity has no registry match in GFW; an earlier identity did (+15): last confirmed: NORSTAR INTREPID / MHL / MMSI 538003031 (2012-01-26 - 2023-07-22, registry + AIS)
 - AIS gaps (+15): no track points at all inside the analysis window
-- 2 identities linked to the same hull (2 in the 5 years before 2024-12-25) (+10): \* NORSTAR INTREPID / MHL / MMSI 538003031 (2012-01-26 - 2023-07-22, registry + AIS)
+- 2 distinct name/flag combinations in the 5 years before 2024-12-25 (2 linked records in total) (+10): \* NORSTAR INTREPID / MHL / MMSI 538003031 (2012-01-26 - 2023-07-22, registry + AIS)
 - 1 flag change(s) (+10): 2023-07-22: MHL -&gt; COK (Paris MoU grey, ITF flag of convenience)  \[NORSTAR INTREPID -&gt; EAGLE-S\]  (recent)
+
+### Notes
+
+- 0 track points inside the analysis window (1686 loaded, 1 identity track(s)).
+- No positions inside the analysis window: movement findings are limited by missing data.
+- Timestamp filtering retains current identity links, registry matches and fixed 2025 flag weights; it does not reconstruct what was known at the cut-off.
 
 ## Full data
 
@@ -33,7 +39,7 @@ Retrospective timestamp filter of the bundled snapshot. Current identity links, 
 
 #### Identity (+10)
 
-##### 2 identities linked to the same hull (2 in the 5 years before 2024-12-28) (`MULTI_IDENTITY`, +10)
+##### 2 distinct name/flag combinations in the 5 years before 2024-12-28 (2 linked records in total) (`MULTI_IDENTITY`, +10)
 
 - \* NORSTAR INTREPID / MHL / MMSI 538003031 (2012-01-26 - 2023-07-22, registry + AIS)
 - \* EAGLE-S / COK / MMSI 518998865 (2023-07-22 - 2026-03-28, self-reported AIS only)
@@ -73,7 +79,7 @@ Public GFW tracks are simplified (often one point every 60-90 min on open water)
 
 Reported time (approximate): 2024-12-25 10:26 UTC. Points within +/- 3 h:
 
-No AIS positions in GFW for this period.
+No loaded AIS positions in this interval.
 
 ### Notes
 

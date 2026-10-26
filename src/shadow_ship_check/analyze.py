@@ -20,10 +20,13 @@ def merge_lookup_identities(identities: List[Identity], lookups: Optional[Dict[s
     if not lookups:
         return list(identities)
     out = {}
+    known_imos = {i.imo for i in identities if i.imo}
     for i in identities:
         _merge(out, replace(i))
     for others in lookups.values():
         for o in others:
+            if known_imos and o.imo and o.imo not in known_imos:
+                continue
             candidates = [i for i in out.values() if i.key == o.key and not (i.imo and o.imo and i.imo != o.imo)]
             imos = {i.imo for i in candidates if i.imo}
             if not candidates or len(imos) > 1:
@@ -155,6 +158,8 @@ def analyze(
     sigs.sort(key=lambda s: order.get(s.code, 99))
     total = sum(len(v) for v in movement.values())
     notes = [f"{n_window} track points inside the analysis window ({total} loaded, {len(movement)} identity track(s))."]
+    if not identities:
+        notes.append("No identity records: identity and registry findings are limited by missing data.")
     if not n_window:
         notes.append("No positions inside the analysis window: movement findings are limited by missing data.")
     if as_of:
@@ -162,7 +167,7 @@ def analyze(
             "Timestamp filtering retains current identity links, registry matches and fixed 2025 flag weights; "
             "it does not reconstruct what was known at the cut-off."
         )
-    if not cables:
+    if not cables or not cables.lines:
         notes.append("No cable layer: cable crossings were not checked.")
     excerpt = []
     if incident_time:
@@ -203,7 +208,15 @@ def analyze_fixture(
     sanctions_list: Optional[dict] = None,
 ) -> Report:
     """Re-run a case, optionally filtering timestamps in the current snapshot."""
-    identities = identities_from_entries(fixture["identities"])
+    if not isinstance(fixture, dict) or not isinstance(fixture.get("identities"), list):
+        raise ValueError("Fixture must contain an identities list")
+    if not isinstance(fixture.get("tracks"), dict) or any(
+        not isinstance(v, dict) or not isinstance(v.get("points"), list) for v in fixture["tracks"].values()
+    ):
+        raise ValueError("Fixture tracks must be objects with point lists")
+    if fixture.get("mmsi_lookups") is not None and not isinstance(fixture["mmsi_lookups"], dict):
+        raise ValueError("Fixture MMSI lookups must be an object")
+    identities = [i for i in identities_from_entries(fixture["identities"]) if not i.imo or i.imo == case["imo"]]
     tracks = {k: [TrackPoint.from_row(r) for r in v["points"]] for k, v in fixture["tracks"].items()}
     lookups = {m: identities_from_entries(e, dedupe=False) for m, e in (fixture.get("mmsi_lookups") or {}).items()}
     # identities linked to the hull by hand (no IMO in GFW, found via name search)

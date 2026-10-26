@@ -55,7 +55,8 @@ CASES = {
         "region": "Taiwan Strait (Taiwan-Penghu)",
         "status": "The Tainan District Court's first-instance judgment of 12 Jun 2025 imposed a three-year "
         "sentence for damaging the cable with conditional intent. "
-        "The final procedural outcome is not established here.",
+        "On 29 Aug 2025, the Tainan Branch of the Taiwan High Court dismissed the prosecution's sentence appeal "
+        "and upheld the sentence. Further appeal was allowed; later finality is not established here.",
         "window": (_utc("2025-02-22T00:00"), _utc("2025-02-26T00:00")),
         "primary_track": "hong_tai_58",
         # data cut-off for the pre-incident score: 00:00 local on 25 Feb; the break was reported for the early morning
@@ -101,8 +102,8 @@ CASES = {
 }
 
 
-# Control vessels: ordinary ships in the same waters and time windows. They are
-# used to check that the score does not simply flag every ship.
+# Illustrative controls in the incident time windows. Only Finlandia is in its
+# incident comparison region; these are not matched passages over the same cables.
 CONTROLS = {
     "control_finlandia": {
         "title": "Control: Finlandia (Helsinki-Tallinn ferry), Gulf of Finland",
@@ -113,9 +114,10 @@ CONTROLS = {
         "parallel": [],
     },
     "control_yi_peng_5": {
-        "title": "Control: Yi Peng 5 (sister ship of Yi Peng 3, same operator)",
+        "title": "Control: Yi Peng 5 (comparison vessel near Taiwan)",
         "imo": "9221190",
-        "region": "varies",
+        "region": "Taiwan Strait (near Fujian)",
+        "notes": ["This control is near Taiwan, outside the Baltic incident region; its cut-off is the window end."],
         "window": (_utc("2024-11-16T12:00"), _utc("2024-11-18T18:00")),
         "primary_track": "control_yi_peng_5",
         "parallel": [],
@@ -123,7 +125,10 @@ CONTROLS = {
     "control_ever_liven": {
         "title": "Control: Ever Liven (Taiwan-flagged container ship)",
         "imo": "9595527",
-        "region": "varies",
+        "region": "Western Pacific",
+        "notes": [
+            "This control is in the western Pacific, outside the Taiwan incident region; its cut-off is the window end."
+        ],
         "window": (_utc("2025-02-22T00:00"), _utc("2025-02-26T00:00")),
         "primary_track": "control_ever_liven",
         "parallel": [],

@@ -4,7 +4,7 @@
 |---|---|
 | Incident | Break of the Taiwan–Penghu No. 3 cable, about 6 nm north-west of Jiangjun fishing port (Tainan) |
 | Reported | Early morning of 25 Feb 2025 (local time, UTC+8); the coast guard detained the ship the same day |
-| Status | The Tainan District Court's first-instance judgment of 12 Jun 2025 sentenced the captain to three years for damaging the cable with conditional intent. This describes that judgment and does not claim it was the final procedural outcome. |
+| Status | The Tainan District Court imposed a three-year sentence on 12 Jun 2025 for damaging the cable with conditional intent. On 29 Aug 2025, the Tainan Branch of the Taiwan High Court dismissed the prosecution's appeal against the sentence and upheld it. The statement allowed a further appeal; later finality is not established here. |
 | Hull | Cargo ship broadcasting as HONGTAI58 (Togo, MMSI 671756000) without IMO; GFW links this identity to IMO 8357069 by name and MMSI. The physical hull assignment remains uncertain. |
 | Tool result | 100 HIGH before the incident, 100 with full data ([report](../reports/hong_tai_58.md)) |
 
@@ -75,3 +75,4 @@ tool cannot test the anchorage against the damaged cable.
 * [Taiwan News (Chinese), 25 Feb 2025](https://www.taiwannews.com.tw/zh/news/6044971): break 6 nm north-west of Jiangjun fishing port
 * [Reuters via Baird Maritime, 12 Jun 2025](https://www.bairdmaritime.com/security/incidents/piracy/taiwan-hands-jail-term-to-chinese-captain-for-damaging-subsea-cables): three-year sentence
 * [Tainan District Court, 12 Jun 2025](https://www.judicial.gov.tw/tw/cp-1888-1341586-34f43-1.html): first-instance judgment, case 114年度訴字第235號
+* [Court appeal statement, 29 Aug 2025](https://www.judicial.gov.tw/tw/cp-1888-1395515-e9707-1.html): prosecution's sentence appeal dismissed, three-year sentence upheld; further appeal allowed

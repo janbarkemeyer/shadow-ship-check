@@ -19,7 +19,7 @@ Mediterranean, West Africa and India (GFW map, full period).
 
 ## What the track shows
 
-* GFW has no position at all between 11 Dec 2024 02:26 UTC and 7 Mar 2025 00:00 UTC. The last
+* The bundled GFW track has no position between 11 Dec 2024 02:26 UTC and 7 Mar 2025 00:00 UTC. The last
   position is in the eastern Gulf of Finland off the Russian coast (59.92 N, 28.67 E), the next one in
   the North Sea (53.64 N, 3.63 E). The ship's departure from Ust-Luga, the crossing of Estlink 2, the
   U-turn reported by Finnish media, the boarding and the whole detention are missing.
@@ -39,8 +39,9 @@ Before the incident the gap since 11 Dec still counts (+15); without it the ship
 
 ## Open questions
 
-1. Why does GFW have no Eagle S positions from mid-December 2024 to March 2025? Check whether a logged-in
-   account or the GFW API with a token returns more data.
+1. Why are Eagle S positions missing from the bundled snapshot from mid-December 2024 to March 2025?
+   Check a second AIS source and the datasets available with authorised GFW access. A token alone
+   does not establish that the missing positions are available.
 2. Track data around 25 Dec: Estlink 2 and the Finland–Estonia telecom cables are in the bundled cable
    layer, but GFW has no positions to test `CABLE_CROSSING_SLOW` against.
 3. Ownership changes in July 2023 (registry data beyond GFW, e.g. Equasis).

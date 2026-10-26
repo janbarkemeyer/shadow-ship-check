@@ -16,7 +16,8 @@
 | YI PENG 3 | China | 414270000 | since 2016 (with IMO since Jun 2020) | no |
 
 One sale and reflagging to China eight years before the incident; no recent identity changes detected. The
-sister ship Yi Peng 5 (control vessel) has the same profile.
+comparison vessel Yi Peng 5 also has no scored recent identity changes. Its bundled positions
+are near Taiwan, so it is not a local traffic control for the Baltic incident.
 
 ## What the track shows
 

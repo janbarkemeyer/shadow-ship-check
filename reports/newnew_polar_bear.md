@@ -7,17 +7,22 @@ Case file with context and sources: [newnew_polar_bear.md](../cases/newnew_polar
 | Before the incident | 30 MEDIUM | 10 | 20 | 0 |
 | Full data | 35 MEDIUM | 10 | 25 | 0 |
 
-Pre-incident data cut-off: 2023-10-07 20:00 UTC.  
+Timestamp cut-off: 2023-10-07 20:00 UTC.<br>
 Analysis window: 2023-10-07 12:00 - 2023-10-08 06:00 UTC.  
-_Research indicators only. The score is not a probability or evidence of intent or responsibility for damage. LOW may reflect limited data. Data: Global Fishing Watch (CC BY-NC 4.0)._
+_Heuristic research indicators only. The score is not a probability or evidence of intent or responsibility for damage. LOW may reflect limited data. Overlapping rules can add points for the same event. The combined score is capped at 100; group totals are uncapped. Bundled sources: Global Fishing Watch (CC BY-NC 4.0); cable routes © OpenStreetMap contributors (ODbL); UK Sanctions List (OGL v3) via OpenSanctions (CC BY-NC 4.0)._
 
 ## Before the incident
 
 Retrospective timestamp filter of the bundled snapshot. Current identity links, registry matches, manual associations and fixed 2025 flag weights remain; this does not reconstruct an advance warning.
 
 - Selected AIS identity has no registry match in GFW; an earlier identity did (+15): last confirmed: BALTIC FULMAR / CYP / MMSI 210925000 (2017-04-28 - 2023-06-20, registry + AIS)
-- 5 identities linked to the same hull (2 in the 5 years before 2023-10-07) (+10):   REINBEK / LBR / MMSI 636091998 (2012-01-03 - 2014-03-13, self-reported AIS only)
+- 2 distinct name/flag combinations in the 5 years before 2023-10-07 (5 linked records in total) (+10):   REINBEK / LBR / MMSI 636091998 (2012-01-03 - 2014-03-13, self-reported AIS only)
 - 4 flag change(s) (+5): 2014-03-13: LBR -&gt; MLT (Paris MoU white, ITF flag of convenience)  \[REINBEK -&gt; REINBEK\]
+
+### Notes
+
+- 3 track points inside the analysis window (49 loaded, 1 identity track(s)).
+- Timestamp filtering retains current identity links, registry matches and fixed 2025 flag weights; it does not reconstruct what was known at the cut-off.
 
 ## Full data
 
@@ -36,7 +41,7 @@ Retrospective timestamp filter of the bundled snapshot. Current identity links, 
 
 #### Identity (+10)
 
-##### 6 identities linked to the same hull (2 in the 5 years before 2023-10-08) (`MULTI_IDENTITY`, +10)
+##### 2 distinct name/flag combinations in the 5 years before 2023-10-08 (6 linked records in total) (`MULTI_IDENTITY`, +10)
 
 -   REINBEK / LBR / MMSI 636091998 (2012-01-03 - 2014-03-13, self-reported AIS only)
 -   REINBEK / MLT / MMSI 229739000 (2014-03-13 - 2016-03-07, self-reported AIS only)

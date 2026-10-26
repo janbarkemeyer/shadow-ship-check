@@ -2,18 +2,25 @@
 
 | | Score | Identity | Flag & registry | Behaviour |
 |---|---|---|---|---|
-| Before the incident | 0 LOW | 0 | 0 | 0 |
+| Window-end cut-off | 0 LOW | 0 | 0 | 0 |
 | Full data | 0 LOW | 0 | 0 | 0 |
 
-Pre-incident data cut-off: 2024-12-28 23:59 UTC.  
+Timestamp cut-off: 2024-12-28 23:59 UTC.<br>
 Analysis window: 2024-12-23 00:00 - 2024-12-28 23:59 UTC.  
-_Research indicators only. The score is not a probability or evidence of intent or responsibility for damage. LOW may reflect limited data. Data: Global Fishing Watch (CC BY-NC 4.0)._
+_Heuristic research indicators only. The score is not a probability or evidence of intent or responsibility for damage. LOW may reflect limited data. Overlapping rules can add points for the same event. The combined score is capped at 100; group totals are uncapped. Bundled sources: Global Fishing Watch (CC BY-NC 4.0); cable routes © OpenStreetMap contributors (ODbL); UK Sanctions List (OGL v3) via OpenSanctions (CC BY-NC 4.0)._
 
-## Before the incident
+## Window-end cut-off
 
 Retrospective timestamp filter of the bundled snapshot. Current identity links, registry matches, manual associations and fixed 2025 flag weights remain; this does not reconstruct an advance warning.
 
+This control has no incident time. Its cut-off is the end of its analysis window.
+
 No scored signals.
+
+### Notes
+
+- 302 track points inside the analysis window (753 loaded, 1 identity track(s)).
+- Timestamp filtering retains current identity links, registry matches and fixed 2025 flag weights; it does not reconstruct what was known at the cut-off.
 
 ## Full data
 
@@ -28,7 +35,7 @@ No scored signals.
 
 #### Identity (+0)
 
-##### 2 identities linked to the same hull (1 in the 5 years before 2024-12-28) (`MULTI_IDENTITY`, +0)
+##### 1 distinct name/flag combinations in the 5 years before 2024-12-28 (2 linked records in total) (`MULTI_IDENTITY`, +0)
 
 -   MOBY FREEDOM / ITA / MMSI 247034500 (2012-01-01 - 2012-03-08, self-reported AIS only)
 - \* FINLANDIA / FIN / MMSI 230628000 (2012-03-08 - 2026-10-23, registry + AIS)

@@ -45,9 +45,9 @@ performance in port-state control, not a ship's intent. Source:
 |---|---|---|---|---|
 | `MULTI_IDENTITY` | Distinct name/flag combinations under one IMO in the look-back period | +10 per extra identity, max 30 | Name changes break the link to a ship's history | Ordinary sales; a new MMSI under the same name does not count |
 | `FLAG_CHANGE` | Successive identities with different flags | By the new flag's Paris MoU 2025 rating: black +15, grey +10, white +5; not listed +10 if an ITF flag of convenience, else +5; max 30 recent plus max 10 after the reference date | Flag performance provides context; it does not establish concealment | Ordinary sales and legitimate reflagging, including moves to open registries |
-| `REGISTRY_LOST` / `NO_REGISTRY` | The selected identity has no matching registry MMSI in GFW, while an earlier one did (or none ever did) | +15 (+5 if last match ended > 5 years ago) / +10 | A change in the available registry match | GFW registry coverage varies by flag; this does not establish that a registration is missing or invalid |
+| `REGISTRY_LOST` / `NO_REGISTRY` | The selected identity has no matching registry MMSI in GFW, while an earlier dated one did (or no dated match exists at or before the reference date) | +15 (+5 if last dated match > 5 years ago) / +10 | A change in the available registry match | GFW registry coverage varies by flag; this does not establish that a registration is missing or invalid |
 | `MMSI_FLAG_MISMATCH` | MMSI country prefix (MID) does not match the broadcast flag | +10 each, max 20 | Self-assigned or copied MMSIs | Second registers (e.g. German GIS) |
-| `MMSI_REUSE` | The hull's MMSI was also reported under another name without its IMO | +15 if within 2 years, else +5 | Possible reassignment or identity conflict | Legitimate reassignment, missing dates and incorrect links |
+| `MMSI_REUSE` | The hull's MMSI was also reported under another name without its IMO, or under a conflicting known IMO | +15 if within 2 years, else +5 | Possible reassignment or identity conflict | Legitimate reassignment, missing dates and incorrect links |
 | `NAME_ON_OTHER_MMSI` | The known name appears under an additional MMSI, without a foreign IMO, matching the flag and overlapping the same usage period | +15 | Possible additional identity | Typos during transponder set-up; small craft with the same name and flag |
 | `SANCTIONED` | Hull IMO on the bundled UK sanctions list, designated on or before the reference date | +20 (later designations listed with 0) | A recorded designation, not a finding about a cable incident | The snapshot can be outdated; date-only designations are treated as 00:00 UTC |
 | `IMO_HIDDEN` | A known name + MMSI also broadcast without IMO | +10 | Cuts the AIS identity off from the hull history | Transponders that simply omit the IMO field |
@@ -65,22 +65,38 @@ checks use the supplied identity tracks, which can include longer historical per
 |---|---|---|---|
 | `IDENTITY_HANDOVER` | One identity stops and another starts within 6 h at a reachable position (≤ 10 nm + 15 kn × elapsed time) | +20 | Ignores starts/stops at the edge of the requested period |
 | `PARALLEL_TRACKS` | Linked identities report positions ≥ 100 nm apart within one hour | +20 | Possible shared identity data, incorrect GFW links or erroneous positions |
-| `AIS_GAP` | ≥ 6 h without position, unless a short stationary gap lies outside the window; also reports when all loaded positions lie outside the window | +5 (6–24 h), +10 (≥ 24 h), +10 if overlapping the window, +15 when all loaded points are outside it; max 30 | An entirely empty track yields no gap signal. Any position from another supplied identity inside a gap suppresses its points; this does not require a confirmed handover |
+| `AIS_GAP` | ≥ 6 h without position, unless a short stationary gap lies outside the window; also reports when all loaded positions lie outside the window | +5 (6–24 h), +10 (≥ 24 h), +10 if overlapping the window, +15 when all loaded points are outside it; max 30 | An entirely empty track yields no gap signal and can return LOW despite missing data. A wholly out-of-window track gets +15 only without a reachable linked position inside the window. Linked positions can reduce a gap's points only along a reachable path between its endpoints; remaining unobserved intervals still contribute. Proximity does not confirm a handover |
 | `SLOW_LOITERING` | ≥ 2 h at ≤ 3 kn; "slow moving" if the path rate is ≥ 0.5 nm/h | +10 per slow-moving run, max 20; stationary runs 0 | Anchoring is not scored because ports and anchorages look the same; a slow crossing of a mapped cable is scored by `CABLE_CROSSING_SLOW` |
 | `SPEED_DROP` | ≥ 1.5 h underway above 2 kn and below 60 % of the median of loaded AIS speeds ≥ 5 kn, with real movement (≥ 1 nm/h); needs ≥ 5 baseline points | +10 | A relative speed change; it does not identify the cause |
 | `ZIGZAG` | ≥ 4 positions within 6 h: path ≥ 5 nm, path ≥ 2.5 × net displacement, average ≤ 6 kn | +10 | Filters out fast ferry crossings; ordinary waiting and manoeuvring can still qualify |
 | `CABLE_CROSSING_SLOW` | The straight line between two positions (≤ 3 h apart) crosses a mapped cable or pipeline while the speed over ground is ≤ 70 % of the ship's median cruising speed (5 kn if unknown); lying still (< 1 kn) does not count | +20 | Uses the bundled OpenStreetMap layer; ships cross cables constantly, only slow crossings are listed |
 
+Linked positions used to assess a gap must be reachable from both endpoints and along the selected
+path, using the existing handover allowance of 10 nm plus 15 kn times elapsed hours. The largest
+remaining interval contribution is used, capped at the original gap contribution. A gap overlapping
+the window can only be reduced by a path containing a position in the window.
+
+The separate +15 finding for a track wholly before or after the window is not added if a linked
+position inside the window is reachable from its nearest endpoint. This establishes only that
+a compatible position was loaded inside the window, not continuous coverage of it. Bounded gaps
+are still checked using their remaining intervals. Entirely empty tracks receive no gap points;
+a LOW result with no positions is not evidence of ordinary movement. These are plausibility
+checks, not independent confirmation that the identities belong to one hull.
+
 ## Calibration and validation
 
-Thresholds were first set from the problem description, then adjusted once against three control
-vessels sailing in the same waters and time windows as the incident ships:
+Thresholds were first set from the problem description, then adjusted once against three
+illustrative control vessels in the incident time windows:
 
-* *Finlandia* (Helsinki–Tallinn ferry); originally flagged for zig-zag and port stays → zig-zag got a
+* *Finlandia* (Helsinki–Tallinn ferry, in the Gulf of Finland); originally flagged for zig-zag and port stays → zig-zag got a
   speed cap, stationary periods stopped scoring.
-* *Ever Liven* (Taiwanese container ship); a second MMSI under the same name counted as a new identity
+* *Ever Liven* (Taiwan-flagged container ship, in the western Pacific during this window); a second MMSI under the same name counted as a new identity
   → `MULTI_IDENTITY` now counts name/flag combinations, and same-name concurrency scores only 5.
-* *Yi Peng 5* (sister ship of Yi Peng 3); unchanged.
+* *Yi Peng 5* (near Taiwan during this window); unchanged. The bundled data does not establish
+  a shared operator or sister-ship relationship with Yi Peng 3.
+
+Only Finlandia is in its incident comparison region. The other two controls do not test normal
+traffic near the incident cables. Their timestamp cut-offs are window ends, not incident times.
 
 A fourth adjustment came from a review of the whole project: flag changes were first scored by the ITF
 "flag of convenience" list alone. That list includes Liberia, Panama and the Marshall Islands, which
@@ -116,7 +132,7 @@ The result is a retrospective timestamp filter, not proof of an advance warning.
 
 Result (`ssc case all`):
 
-| Ship | Role | Before incident | Full data |
+| Ship | Role | Timestamp cut-off | Full data |
 |---|---|---|---|
 | Xingshun 39 | incident | 100 HIGH | 100 HIGH |
 | Hong Tai 58 | incident | 100 HIGH | 100 HIGH |
@@ -126,6 +142,10 @@ Result (`ssc case all`):
 | Ever Liven | control | 5 LOW | 5 LOW |
 | Yi Peng 5 | control | 5 LOW | 5 LOW |
 | Finlandia | control | 0 LOW | 0 LOW |
+
+For incident cases, the cut-off is the configured time before the incident. Controls have no
+incident time and use the end of their analysis window. These are not spatially and temporally
+matched control passages.
 
 Eagle S keeps an `AIS_GAP` before the incident because GFW has no positions after 11 Dec 2024. That is
 most likely a coverage gap, not a switched-off transponder (see the case file); without it the ship

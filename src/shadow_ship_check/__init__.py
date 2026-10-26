@@ -1,6 +1,6 @@
-"""Shadow Ship Check - camouflage indicators for ships near subsea cable incidents."""
+"""Shadow Ship Check - AIS identities and tracks around reported subsea cable incidents."""
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 
 def data_path():

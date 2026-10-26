@@ -10,8 +10,12 @@ from typing import List, Optional
 from .models import CATEGORIES, CATEGORY_OF, Report
 
 DISCLAIMER = (
-    "Research indicators only. The score is not a probability or evidence of intent or responsibility for damage. "
-    "LOW may reflect limited data. Data: Global Fishing Watch (CC BY-NC 4.0)."
+    "Heuristic research indicators only. "
+    "The score is not a probability or evidence of intent or responsibility for damage. "
+    "LOW may reflect limited data. Overlapping rules can add points for the same event. "
+    "The combined score is capped at 100; group totals are uncapped. "
+    "Bundled sources: Global Fishing Watch (CC BY-NC 4.0); cable routes © OpenStreetMap contributors (ODbL); "
+    "UK Sanctions List (OGL v3) via OpenSanctions (CC BY-NC 4.0)."
 )
 
 
@@ -82,7 +86,7 @@ def _excerpt(r: Report, h: str = "##") -> List[str]:
             for lab, p in r.excerpt
         ]
     else:
-        out.append("No AIS positions in GFW for this period.")
+        out.append("No loaded AIS positions in this interval.")
     return out + [""]
 
 
@@ -109,6 +113,8 @@ def to_markdown(r: Report, title: Optional[str] = None) -> str:
 def to_markdown_case(full: Report, before: Report, title: str, case_file: Optional[str] = None) -> str:
     """One report per reference case: the pre-incident view first, then the full data."""
     cats = list(CATEGORIES)
+    has_incident = full.incident_time is not None
+    cut_label = "Before the incident" if has_incident else "Window-end cut-off"
     out = [f"# {_md(title)}", ""]
     if case_file:
         out += [f"Case file with context and sources: [{case_file.rsplit('/', 1)[-1]}]({case_file})", ""]
@@ -116,22 +122,24 @@ def to_markdown_case(full: Report, before: Report, title: str, case_file: Option
         "| | Score | " + " | ".join(CATEGORIES[c][0] for c in cats) + " |",
         "|---|---|" + "---|" * len(cats),
     ]
-    for name, r in (("Before the incident", before), ("Full data", full)):
+    for name, r in ((cut_label, before), ("Full data", full)):
         out.append(f"| {name} | {r.score} {r.level} | " + " | ".join(str(r.subscores[c]) for c in cats) + " |")
     out += [""]
     if before.as_of:
-        out.append(f"Pre-incident data cut-off: {before.as_of:%Y-%m-%d %H:%M} UTC.  ")
+        out.append(f"Timestamp cut-off: {before.as_of:%Y-%m-%d %H:%M} UTC.<br>")
     if full.window:
         out.append(f"Analysis window: {full.window[0]:%Y-%m-%d %H:%M} - {full.window[1]:%Y-%m-%d %H:%M} UTC.  ")
     out += [f"_{DISCLAIMER}_", ""]
     out += [
-        "## Before the incident",
+        f"## {cut_label}",
         "",
         "Retrospective timestamp filter of the bundled snapshot. Current identity links, registry matches, "
         "manual associations and fixed 2025 flag weights remain; this does not reconstruct an advance warning.",
         "",
     ]
-    out += _summary(before, 10)
+    if not has_incident:
+        out += ["This control has no incident time. Its cut-off is the end of its analysis window.", ""]
+    out += _summary(before, 10) + _notes(before, "###")
     out += ["## Full data", "", "### Identities", ""] + _identity_table(full) + [""]
     out += ["### Signals", ""] + _signals(full, "###") + _excerpt(full, "###") + _notes(full, "###")
     return "\n".join(out).rstrip() + "\n"
@@ -140,6 +148,8 @@ def to_markdown_case(full: Report, before: Report, title: str, case_file: Option
 def to_text(r: Report) -> str:
     cut = f" (timestamps through {r.as_of:%Y-%m-%d %H:%M} UTC)" if r.as_of else ""
     lines = [f"Shadow Ship Check - {r.query}", f"Score {r.score}/100 ({r.level}){cut}", f"  {_sub(r)}", ""]
+    if r.window:
+        lines += [f"Analysis window: {r.window[0]:%Y-%m-%d %H:%M} - {r.window[1]:%Y-%m-%d %H:%M} UTC", ""]
     if r.as_of:
         lines += [
             "Current identity links, registry matches and fixed 2025 flag weights remain; "
@@ -156,6 +166,19 @@ def to_text(r: Report) -> str:
             lines.append(f"        ... {len(s.evidence) - 8} more")
         if s.caveat:
             lines.append(f"        {s.caveat}")
+    if r.incident_time:
+        lines += [
+            "",
+            f"Track around the reported incident time (approximate): {r.incident_time:%Y-%m-%d %H:%M} UTC",
+            f"Positions within +/- {r.excerpt_hours:g} h:",
+        ]
+        if r.excerpt:
+            lines += [
+                f"  {p.t:%Y-%m-%d %H:%M} UTC  {label or '-'}  {p.lat:.4f}, {p.lon:.4f}  {p.speed:.1f} kn"
+                for label, p in r.excerpt
+            ]
+        else:
+            lines.append("  No loaded AIS positions in this interval.")
     if r.notes:
         lines += ["", "Notes:"] + [f"  - {n}" for n in r.notes]
     lines += ["", DISCLAIMER]
@@ -167,6 +190,7 @@ def to_json(r: Report) -> str:
         "query": r.query,
         "score": r.score,
         "level": r.level,
+        "interpretation": DISCLAIMER,
         "subscores": r.subscores,
         "window": [w.isoformat() for w in r.window] if r.window else None,
         "as_of": r.as_of.isoformat() if r.as_of else None,

@@ -18,7 +18,7 @@ from .cases import ALL, CASES
 from .geo import CableLayer
 from .gfw import GFWClient, identities_from_entries
 from .models import Identity, normalize_name
-from .report import to_json, to_markdown, to_markdown_case, to_text
+from .report import DISCLAIMER, to_json, to_markdown, to_markdown_case, to_text
 
 DEFAULT_FIXTURES = data_path() / "fixtures"
 
@@ -109,9 +109,20 @@ def cmd_check(args) -> int:
             for m in {i.mmsi for i in hits if i.mmsi} - set(lookups):
                 lookups[m] = [i for i in identities_from_entries(client.search_raw(m), dedupe=False) if i.mmsi == m]
     keys = {i.key for i in raw}
-    gfw_ids = {i.vessel_id: i for i in raw if i.vessel_id}
+    hull_imos = {i.imo for i in raw if i.imo}
+
+    def overlaps_period(i: Identity) -> bool:
+        return bool(i.vessel_id) and (not i.start or i.start <= fetch_end) and (not i.end or i.end >= start - pad)
+
+    gfw_ids = {i.vessel_id: i for i in raw if overlaps_period(i)}
     for found in lookups.values():
-        gfw_ids.update({i.vessel_id: i for i in found if i.vessel_id and i.key in keys})
+        gfw_ids.update(
+            {
+                i.vessel_id: i
+                for i in found
+                if overlaps_period(i) and i.key in keys and (not i.imo or not hull_imos or i.imo in hull_imos)
+            }
+        )
     # identities linked by hand (e.g. a name variant without IMO)
     linked = []
     for q in args.also or []:
@@ -121,12 +132,10 @@ def cmd_check(args) -> int:
             if q in (i.mmsi, i.imo) or i.key[0] == normalize_name(q)
         ]
         linked += hits
-        gfw_ids.update({i.vessel_id: i for i in hits if i.vessel_id})
+        gfw_ids.update({i.vessel_id: i for i in hits if overlaps_period(i)})
 
     tracks = {}
     for vid, ident in gfw_ids.items():
-        if not ident.end or ident.end < start - pad or (ident.start and ident.start > fetch_end):
-            continue
         pts = client.track(vid, start - pad, fetch_end)
         if pts:
             label = _label(ident)
@@ -182,7 +191,7 @@ def cmd_case(args) -> int:
     cables = _cables(args)
     listing = _sanctions(args)
     if len(names) > 1:
-        print(f"{'case':20} {'full':>11}   {'before':>11}   scored signals before the incident")
+        print(f"{'case':20} {'full':>11}   {'cut-off':>11}   scored signals at the timestamp cut-off")
     for n in names:
         if n not in ALL:
             print(f"Unknown case {n!r}. Available: {', '.join(ALL)}", file=sys.stderr)
@@ -191,7 +200,8 @@ def cmd_case(args) -> int:
         fixture = load_fixture(Path(args.fixtures) / f"{n}.json")
         if len(names) == 1:
             report = analyze_fixture(case, fixture, cables, args.before_incident, listing)
-            _emit(report, args, case["title"] + (" (before the incident)" if args.before_incident else ""))
+            cut_label = "before the incident" if n in CASES else "timestamp cut-off"
+            _emit(report, args, case["title"] + (f" ({cut_label})" if args.before_incident else ""))
             continue
         full = analyze_fixture(case, fixture, cables, False, listing)
         before = analyze_fixture(case, fixture, cables, True, listing)
@@ -202,6 +212,12 @@ def cmd_case(args) -> int:
             Path(args.md, f"{n}.md").write_text(text, encoding="utf-8")
         scored = ", ".join(f"{s.code}+{s.points}" for s in before.signals if s.points)
         print(f"{n:20} {full.score:>4} {full.level:6}   {before.score:>4} {before.level:6}   {scored}")
+    if len(names) > 1:
+        print(f"\n{DISCLAIMER}")
+        print(
+            "Timestamp cut-offs retain current identity links, registry matches and fixed 2025 flag weights; "
+            "they do not reconstruct an advance warning."
+        )
     return 0
 
 
@@ -280,6 +296,17 @@ def main(argv=None) -> int:
     args = p.parse_args(argv)
     try:
         return args.func(args)
+    except urllib.error.HTTPError as exc:
+        if exc.code in (401, 403):
+            print(
+                f"Global Fishing Watch denied access (HTTP {exc.code}). "
+                "Check GFW_API_TOKEN and API permissions; access is not guaranteed. "
+                "Use ssc case all or ssc eval for bundled offline data.",
+                file=sys.stderr,
+            )
+        else:
+            print(f"Global Fishing Watch returned HTTP {exc.code}: {exc.reason}", file=sys.stderr)
+        return 2
     except (urllib.error.URLError, http.client.HTTPException, TimeoutError) as exc:
         print(f"Could not reach Global Fishing Watch: {exc}", file=sys.stderr)
         return 2

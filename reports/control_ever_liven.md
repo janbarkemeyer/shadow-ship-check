@@ -2,18 +2,26 @@
 
 | | Score | Identity | Flag & registry | Behaviour |
 |---|---|---|---|---|
-| Before the incident | 5 LOW | 5 | 0 | 0 |
+| Window-end cut-off | 5 LOW | 5 | 0 | 0 |
 | Full data | 5 LOW | 5 | 0 | 0 |
 
-Pre-incident data cut-off: 2025-02-26 00:00 UTC.  
+Timestamp cut-off: 2025-02-26 00:00 UTC.<br>
 Analysis window: 2025-02-22 00:00 - 2025-02-26 00:00 UTC.  
-_Research indicators only. The score is not a probability or evidence of intent or responsibility for damage. LOW may reflect limited data. Data: Global Fishing Watch (CC BY-NC 4.0)._
+_Heuristic research indicators only. The score is not a probability or evidence of intent or responsibility for damage. LOW may reflect limited data. Overlapping rules can add points for the same event. The combined score is capped at 100; group totals are uncapped. Bundled sources: Global Fishing Watch (CC BY-NC 4.0); cable routes © OpenStreetMap contributors (ODbL); UK Sanctions List (OGL v3) via OpenSanctions (CC BY-NC 4.0)._
 
-## Before the incident
+## Window-end cut-off
 
 Retrospective timestamp filter of the bundled snapshot. Current identity links, registry matches, manual associations and fixed 2025 flag weights remain; this does not reconstruct an advance warning.
 
+This control has no incident time. Its cut-off is the end of its analysis window.
+
 - Overlapping first/last dates for linked AIS identities (+5): 2015-04-11 - 2015-10-15: EVER LIVEN/TWN/416481000 and JIRENYU  00085/CHN/412286696  (less than 30 days inside the scoring period, not scored)
+
+### Notes
+
+- 63 track points inside the analysis window (177 loaded, 1 identity track(s)).
+- Timestamp filtering retains current identity links, registry matches and fixed 2025 flag weights; it does not reconstruct what was known at the cut-off.
+- This control is in the western Pacific, outside the Taiwan incident region; its cut-off is the window end.
 
 ## Full data
 
@@ -29,7 +37,7 @@ Retrospective timestamp filter of the bundled snapshot. Current identity links, 
 
 #### Identity (+5)
 
-##### 3 identities linked to the same hull (2 in the 5 years before 2025-02-26) (`MULTI_IDENTITY`, +0)
+##### 1 distinct name/flag combinations in the 5 years before 2025-02-26 (3 linked records in total) (`MULTI_IDENTITY`, +0)
 
 - \* EVER LIVEN / TWN / MMSI 416481000 (2013-04-06 - 2026-10-23, registry + AIS)
 -   JIRENYU  00085 / CHN / MMSI 412286696 (2015-04-11 - 2015-10-15, self-reported AIS only)
@@ -47,3 +55,4 @@ Overlap is computed from first/last AIS message per identity; check the tracks (
 ### Notes
 
 - 63 track points inside the analysis window (390 loaded, 1 identity track(s)).
+- This control is in the western Pacific, outside the Taiwan incident region; its cut-off is the window end.

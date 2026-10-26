@@ -46,7 +46,7 @@ def _overlaps(a: Identity, start: datetime, end: datetime) -> bool:
 
 def active_at(identities: Sequence[Identity], ref: datetime) -> Optional[Identity]:
     """Identity in use at ``ref`` (or the last one before it)."""
-    dated = [i for i in identities if i.start and i.start <= ref]
+    dated = [i for i in identities if (i.start or i.end) and (i.start or i.end) <= ref]
     if not dated:
         return None
     covering = [i for i in dated if i.end and i.end >= ref]
@@ -55,8 +55,8 @@ def active_at(identities: Sequence[Identity], ref: datetime) -> Optional[Identit
     return max(
         covering or dated,
         key=lambda i: (
-            i.start if covering else (i.end or i.start),
-            i.start,
+            (i.start or i.end) if covering else (i.end or i.start),
+            i.start or i.end,
             i.key,
             i.imo or "",
             i.source,
@@ -83,8 +83,8 @@ def multiple_identities(
     return [
         Signal(
             code="MULTI_IDENTITY",
-            title=f"{len(named)} identities linked to the same hull ({len(recent)} in the "
-            f"{lookback_years} years before {ref:%Y-%m-%d})",
+            title=f"{len(distinct)} distinct name/flag combinations in the {lookback_years} years "
+            f"before {ref:%Y-%m-%d} ({len(named)} linked records in total)",
             points=pts,
             evidence=ev,
             caveat="* = dated use during the look-back period (scored); other records are outside it or undated.",
@@ -154,10 +154,15 @@ def registry_confirmation(
     current = active_at(identities, ref)
     if not current or current.registry_confirmed:
         return []
-    confirmed = [i for i in identities if i.registry_confirmed and i.start and i.start <= ref]
+    confirmed = [
+        i
+        for i in identities
+        if i.registry_confirmed and ((i.start and i.start <= ref) or (not i.start and i.end and i.end <= ref))
+    ]
     if confirmed:
-        last = max(confirmed, key=lambda i: i.end or i.start)
-        recent = last.end and last.end >= ref - lookback_years * YEAR
+        last = max(confirmed, key=lambda i: (i.end or i.start, i.start or i.end, i.key, i.imo or "", i.source))
+        last_seen = last.end or last.start
+        recent = last_seen >= ref - lookback_years * YEAR
         return [
             Signal(
                 code="REGISTRY_LOST",
@@ -168,18 +173,18 @@ def registry_confirmation(
                 + (
                     ""
                     if recent
-                    else f" The last match ended more than {lookback_years} years before the reference date."
+                    else f" The last dated match was more than {lookback_years} years before the reference date."
                 ),
             )
         ]
     return [
         Signal(
             code="NO_REGISTRY",
-            title="No identity of this hull is confirmed by a registry in GFW",
+            title="No dated registry match at or before the reference date in GFW",
             points=10,
             evidence=[f"selected for {ref:%Y-%m-%d}: {current.label()}"],
             caveat="GFW registry coverage varies by flag and access level; "
-            "a missing match is not proof of non-registration.",
+            "a missing or undated match is not proof of non-registration.",
         )
     ]
 
@@ -322,9 +327,9 @@ def concurrent_identities(
 ) -> List[Signal]:
     """Two identities of the same hull in use during the same period.
 
-    A second MMSI under the *same* name and flag is usually a second
-    transponder or a configuration error (+5); a different name or flag at the
-    same time is the camouflage pattern (+20). Only overlaps in the look-back
+    Matching name/flag combinations score +5; different names or flags score
+    +20. These first/last-message envelopes do not establish continuous
+    simultaneous transmissions or concealment. Only overlaps in the look-back
     period before ``ref`` are scored."""
     ref = _ref(ref)
     lo_limit = ref - lookback_years * YEAR
@@ -449,7 +454,8 @@ def parallel_tracks(
             title="Linked identities report distant positions within one hour",
             points=20,
             evidence=ev,
-            caveat="Either two hulls share identity data (spoofing / cloning) or GFW linked identities wrongly.",
+            caveat="Possible shared identity data, incorrect GFW links or erroneous positions; "
+            "this does not establish that multiple physical hulls were present.",
         )
     ]
 
@@ -501,20 +507,29 @@ def ais_gaps(
             f"{_fmt(p.t)} -> {_fmt(q.t)}: {h:.1f} h without position, {d:.0f} nm straight-line jump "
             f"(implied {d / h:.1f} kn), {p.lat:.3f},{p.lon:.3f} -> {q.lat:.3f},{q.lon:.3f}"
         )
-        covering = {k: sum(1 for x in v if p.t < x.t < q.t) for k, v in (cover or {}).items()}
-        covering = {k: n for k, n in covering.items() if n}
-        if covering:
-            who = ", ".join(f"{k} ({n} positions)" for k, n in covering.items())
-            ev.append(line + f"; meanwhile GFW records linked track(s): {who}; no additional gap points")
-            continue
-        score += 10 if h >= 24 else 5
+        original_points = _gap_points(p, q, window, min_hours, min_jump_nm, context)
+        remaining_points = _covered_gap_points(p, q, cover, window, min_hours, min_jump_nm, context)
+        if remaining_points < original_points:
+            line += f"; plausible linked positions reduce gap points from {original_points} to {remaining_points}"
         if covers:
             line += "  <-- overlaps the analysis window"
-            score += 10
+        score += remaining_points
         ev.append(line)
     if window and pts and (pts[-1].t < window[0] or pts[0].t > window[1]):
-        ev.append("no track points at all inside the analysis window")
-        score += 15
+        before_window = pts[-1].t < window[0]
+        linked_observation = any(
+            window[0] <= x.t <= window[1] and (_reachable(pts[-1], x) if before_window else _reachable(x, pts[0]))
+            for observations in (cover or {}).values()
+            for x in observations
+        )
+        if linked_observation:
+            ev.append(
+                "no positions of this identity inside the analysis window; reachable linked observations exist, "
+                "so no additional absence points (this does not establish continuous coverage)"
+            )
+        else:
+            ev.append("no track points at all inside the analysis window")
+            score += 15
     scored = score > 0
     if quiet:
         ev.append(
@@ -522,8 +537,65 @@ def ais_gaps(
         )
     if not ev:
         return []
-    title = "AIS gaps" if scored else "Only short stationary AIS gaps (not scored)"
+    title = "AIS gaps" if scored else "AIS gaps (not scored)"
     return [Signal("AIS_GAP", title, min(30, score), ev, SPARSE_TRACK_CAVEAT)]
+
+
+def _gap_points(p, q, window, min_hours, min_jump_nm, context):
+    """Apply the existing duration, movement and window rules to one interval."""
+    h = (q.t - p.t).total_seconds() / 3600
+    if h < min_hours or (window and (q.t < window[0] - context or p.t > window[1] + context)):
+        return 0
+    overlaps_window = bool(window and p.t <= window[1] and q.t >= window[0])
+    if h < 48 and not overlaps_window and haversine_nm(p.lat, p.lon, q.lat, q.lon) < min_jump_nm:
+        return 0
+    return (10 if h >= 24 else 5) + (10 if overlaps_window else 0)
+
+
+def _reachable(p, q):
+    """Use the handover plausibility bound; this does not confirm a shared hull."""
+    hours = (q.t - p.t).total_seconds() / 3600
+    return hours > 0 and haversine_nm(p.lat, p.lon, q.lat, q.lon) <= 10 + 15 * hours
+
+
+def _covered_gap_points(p, q, cover, window, min_hours, min_jump_nm, context):
+    """Minimise the largest remaining interval contribution along plausible linked observations.
+
+    The original gap is the upper limit. A path across the analysis window must
+    contain an observation inside it before coverage can reduce that contribution.
+    """
+    original = _gap_points(p, q, window, min_hours, min_jump_nm, context)
+    if not original or not cover:
+        return original
+    candidates = [
+        x for points in cover.values() for x in points if p.t < x.t < q.t and _reachable(p, x) and _reachable(x, q)
+    ]
+    if not candidates:
+        return original
+    points = [p] + sorted(candidates, key=lambda x: (x.t, x.lat, x.lon)) + [q]
+    needs_observation = bool(window and p.t <= window[1] and q.t >= window[0])
+
+    def inside(point):
+        return not needs_observation or window[0] <= point.t <= window[1]
+
+    if needs_observation and not any(inside(point) for point in points):
+        return original
+
+    # Two values per point: paths without / with an in-window observation.
+    # Adding a conflicting observation cannot remove an already valid path.
+    best = [[original, original] for _ in points]
+    best[0][int(inside(p))] = 0
+    for j in range(1, len(points)):
+        for i in range(j - 1, -1, -1):
+            if not _reachable(points[i], points[j]):
+                continue
+            contribution = _gap_points(points[i], points[j], window, min_hours, min_jump_nm, context)
+            for observed in (0, 1):
+                state = int(observed or inside(points[j]))
+                best[j][state] = min(best[j][state], max(best[i][observed], contribution))
+            if best[j][1] == 0:
+                break
+    return best[-1][1]
 
 
 def connected(p: TrackPoint, q: TrackPoint, max_gap_h: float = 3.0) -> bool:

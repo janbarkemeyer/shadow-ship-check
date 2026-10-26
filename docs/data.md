@@ -38,8 +38,12 @@ flag or legal registration. GFW documents uneven registry coverage by flag and v
 [vessel identity caveats](https://globalfishingwatch.org/datasets-and-code-vessel-identity/).
 `NO_REGISTRY` and `REGISTRY_LOST` can therefore reflect coverage rather than a change in legal status.
 At a reference date, the latest-starting covering identity is selected; if none covers it, the
-latest-ended dated identity is used. Equal dates have a deterministic tie-break, not an independent
-resolution of conflicting records.
+latest-ended dated identity is used, including a record with an end but no start when that end is
+at or before the reference date. An unknown start and a later end do not establish an earlier
+observation. Equal dates have a deterministic tie-break, not an independent
+resolution of conflicting records. The age of an earlier registry match uses its last dated
+observation (end, or start when no end is known); an undated match does not establish confirmation
+before the reference date.
 
 The decoder rejects truncated messages, invalid segment offsets, invalid coordinates and unavailable
 AIS speeds. The CLI reports these as input errors rather than scoring a partial track. Separate GFW

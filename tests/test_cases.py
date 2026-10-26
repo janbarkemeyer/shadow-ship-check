@@ -53,12 +53,11 @@ def test_hong_tai_58(fixtures_dir):
         "IDENTITY_HANDOVER",
     } <= codes(r)
     slow = next(s for s in r.signals if s.code == "SLOW_LOITERING")
-    assert any("43.5 h stationary" in e for e in slow.evidence)  # anchored next to the cable for ~2 days
-    # ship leaves its anchorage right around the reported cable break
+    assert any("43.5 h stationary" in e for e in slow.evidence)
     assert max(p.speed for _, p in r.excerpt) >= 4.5
 
 
-def test_yi_peng_3_has_no_identity_camouflage(fixtures_dir):
+def test_yi_peng_3_has_no_scored_recent_identity_changes(fixtures_dir):
     r = run("yi_peng_3", fixtures_dir)
     assert "MULTI_IDENTITY" not in codes(r) and "FLAG_CHANGE" not in codes(r)
     assert "SPEED_DROP" in codes(r)
@@ -85,7 +84,7 @@ def test_cli_case_all(tmp_path, fixtures_dir, capsys):
 
 @pytest.mark.parametrize("name", list(CONTROLS))
 def test_controls_stay_low(name, fixtures_dir):
-    """Ordinary ships in the same waters must not be flagged."""
+    """The bundled comparison vessels remain LOW under these rules."""
     r = analyze_fixture(CONTROLS[name], load_fixture(fixtures_dir / f"{name}.json"), CableLayer.bundled())
     assert r.level == "LOW", [(s.code, s.points) for s in r.signals]
 

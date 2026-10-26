@@ -24,19 +24,23 @@ identity; this case links it manually by name and track evidence.*
 
 ## Results
 
-Each case is scored twice: with a cut-off before the incident, and with the full bundled snapshot.
+Each incident case is scored twice: with a cut-off before the incident, and with the full bundled snapshot.
 The first score uses earlier timestamps but today's identity links and registry matches. Flag
 weights use the Paris MoU 2025 list, published in July 2026. This is a retrospective comparison,
 not a reconstruction of what an analyst could have known at the time.
 
-| Ship | Incident | Before | Full data | What stands out before the incident |
+| Ship | Incident | Timestamp cut-off | Full data | What stands out at the cut-off |
 |---|---|---|---|---|
 | [Xingshun 39](cases/xingshun_39.md) | Keelung cable, Jan 2025 | 100 | 100 | Manually linked identity without IMO; overlapping dates and a possible handover off Keelung |
 | [Hong Tai 58](cases/hong_tai_58.md) | Taiwan–Penghu cable, Feb 2025 | 100 | 100 | Identity cluster with conflicting tracks; some history may belong to another hull |
 | [Eagle S](cases/eagle_s.md) | Estlink 2, Dec 2024 | 50 | 55 | Renamed and moved to a grey-listed flag in 2023; no GFW positions since 11 Dec |
 | [NewNew Polar Bear](cases/newnew_polar_bear.md) | Balticconnector, Oct 2023 | 30 | 35 | Bought, renamed and reflagged < 4 months before |
 | [Yi Peng 3](cases/yi_peng_3.md) | BCS / C-Lion1, Nov 2024 | 5 | 35 | No recent identity changes; reconstructed slow C-Lion1 crossing in the full snapshot |
-| Finlandia, Yi Peng 5, Ever Liven | controls | 0–5 | 0–5 | Ordinary ships in the same waters and windows |
+| Finlandia, Yi Peng 5, Ever Liven | controls | 0–5 | 0–5 | Illustrative comparisons; only Finlandia is in the incident region |
+
+For controls, the cut-off is the end of the analysis window, not an incident time. Yi Peng 5 is
+near Taiwan and Ever Liven is in the western Pacific in their comparison windows; they are not
+matched traffic from the incident regions.
 
 Per-case reports: [reports/](reports/). Matsu (2023) is documented as the case without any published
 ship identifier ([cases/matsu_2023.md](cases/matsu_2023.md)).
@@ -53,15 +57,28 @@ Details: [docs/evaluation.md](docs/evaluation.md).
 
 ## Quick start
 
+I use Python 3.10 or newer in a virtual environment. The bundled examples run offline.
+
 ```bash
 git clone https://github.com/janbarkemeyer/shadow-ship-check && cd shadow-ship-check
-pip install -e ".[dev]"      # standard library only; pytest/ruff for development
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[dev]"  # runtime: standard library; pytest/ruff for development
 
 ssc case all                 # the reference cases, offline from bundled data
 ssc case yi_peng_3           # one case with all evidence
 ssc eval                     # sanctioned-vessel comparison, offline
+```
 
-# known IMO or MMSI, live from GFW; --as-of filters timestamps in the current data
+On Windows, create the environment with `py -m venv .venv` and activate it with
+`.venv\Scripts\activate` in Command Prompt.
+Live commands require GFW access. HTTP 401 means authentication is required; 403 means access was denied.
+Neither response means that the vessel has no data.
+The client accepts `GFW_API_TOKEN` for an authorised token, but access to the map-track endpoint is
+not guaranteed. See [data and access](docs/data.md).
+
+```bash
+ssc search XINGSHUN39        # list matching identities, then choose an IMO or MMSI
 ssc check 8358427 --start 2025-01-02 --end 2025-01-04 --also SHUNXING39 --md report.md
 ssc check 8358427 --as-of 2025-01-02T12:00 --also SHUNXING39
 ```

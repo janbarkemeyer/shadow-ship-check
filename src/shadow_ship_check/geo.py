@@ -71,17 +71,45 @@ class CableLayer:
         lines = []
         for f in files:
             gj = json.loads(f.read_text(encoding="utf-8"))
-            for feat in gj.get("features", []):
-                props = feat.get("properties") or {}
+            if (
+                not isinstance(gj, dict)
+                or gj.get("type") != "FeatureCollection"
+                or not isinstance(gj.get("features"), list)
+            ):
+                raise ValueError("Cable GeoJSON must be a FeatureCollection with a features list")
+            for feat in gj["features"]:
+                if not isinstance(feat, dict):
+                    raise ValueError("Cable GeoJSON features must be objects")
+                props = feat.get("properties") if feat.get("properties") is not None else {}
+                if not isinstance(props, dict) or (
+                    props.get("name") is not None and not isinstance(props["name"], str)
+                ):
+                    raise ValueError("Cable GeoJSON properties must be an object with a string or null name")
                 name = props.get("name") or (
                     f"unnamed {props.get('kind', 'cable')} (OSM way {props['osm_way']})"
                     if props.get("osm_way")
                     else "cable"
                 )
-                geom = feat.get("geometry") or {}
-                parts = [geom["coordinates"]] if geom.get("type") == "LineString" else geom.get("coordinates", [])
-                if geom.get("type") in ("LineString", "MultiLineString"):
-                    lines += [(name, [tuple(c[:2]) for c in part]) for part in parts if len(part) > 1]
+                geom = feat.get("geometry") if feat.get("geometry") is not None else {}
+                if not isinstance(geom, dict):
+                    raise ValueError("Cable GeoJSON geometry must be an object or null")
+                if geom.get("type") not in ("LineString", "MultiLineString"):
+                    continue
+                coordinates = geom.get("coordinates")
+                if not isinstance(coordinates, list):
+                    raise ValueError("Cable GeoJSON coordinates must be a list")
+                parts = [coordinates] if geom["type"] == "LineString" else coordinates
+                for part in parts:
+                    if (
+                        not isinstance(part, list)
+                        or len(part) < 2
+                        or any(
+                            not isinstance(c, list) or len(c) < 2 or any(type(v) not in (int, float) for v in c[:2])
+                            for c in part
+                        )
+                    ):
+                        raise ValueError("Cable GeoJSON lines require at least two numeric coordinate pairs")
+                    lines.append((name, [tuple(c[:2]) for c in part]))
         return cls(lines)
 
     @classmethod

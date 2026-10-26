@@ -30,8 +30,8 @@ NAMES = {
     "yi_peng_3": ("Yi Peng 3", "BCS / C-Lion1, Nov 2024"),
     "newnew_polar_bear": ("NewNew Polar Bear", "Balticconnector, Oct 2023"),
     "control_finlandia": ("Finlandia", "control: Helsinki–Tallinn ferry"),
-    "control_yi_peng_5": ("Yi Peng 5", "control: sister ship of Yi Peng 3"),
-    "control_ever_liven": ("Ever Liven", "control: container ship"),
+    "control_yi_peng_5": ("Yi Peng 5", "control: near Taiwan"),
+    "control_ever_liven": ("Ever Liven", "control: container ship, western Pacific"),
 }
 
 CSS = """
@@ -61,7 +61,7 @@ img.fig{width:100%;height:auto;margin:1rem 0 .3rem}
 .stat b{display:block;font-size:1.6rem;font-variant-numeric:tabular-nums}
 .stat span{font-size:.85rem;color:var(--muted)}
 pre{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:1rem;overflow-x:auto;font-size:.85rem}
-@media (max-width:600px){.hide-sm{display:none}code{font-size:.8rem}}
+@media (max-width:600px){.hide-sm{display:none}th.num{white-space:normal}code{font-size:.8rem}}
 footer{margin-top:4rem;font-size:.85rem;color:var(--muted)}
 """
 
@@ -89,8 +89,8 @@ def cases_table() -> str:
             f"<td class=hide-sm>{', '.join(f'<code>{s.code}</code>' for s in before.signals if s.points) or '–'}</td></tr>"
         )
     return (
-        '<div class="wrap"><table><thead><tr><th>Ship</th><th class="num">Before the incident</th>'
-        '<th class="num">Full data</th><th class=hide-sm>Scored before the incident</th></tr></thead><tbody>'
+        '<div class="wrap"><table><thead><tr><th>Ship</th><th class="num">Timestamp cut-off</th>'
+        '<th class="num">Full data</th><th class=hide-sm>Scored at the cut-off</th></tr></thead><tbody>'
         + "".join(rows)
         + "</tbody></table></div>"
     )
@@ -154,9 +154,11 @@ one. Their tracks show a possible handover at sea. Searching GFW by IMO alone mi
 this case links it manually by name and track evidence.</p>
 
 <h2>Reference incidents</h2>
-<p>Each case is scored twice: with a timestamp cut-off before the incident, and with the full bundled snapshot.
+<p>Each incident case is scored twice: with a timestamp cut-off before the incident, and with the full bundled snapshot.
 Current identity links, registry matches and manual associations remain. Flag weights use the 2025 Paris MoU list,
-published in July 2026. These are retrospective comparisons, not demonstrated advance warnings. One sale can
+published in July 2026. Controls use the end of the window as their cut-off. Only Finlandia is in
+its incident comparison region; Yi Peng 5 is near Taiwan and Ever Liven is in the western Pacific.
+These are retrospective comparisons, not demonstrated advance warnings. One sale can
 trigger several signals, and movement checks have no independent validation. See the
 <a href="{REPO}/blob/main/docs/methodology.md">methodology</a> for thresholds and limitations.</p>
 {cases_table()}
@@ -166,10 +168,19 @@ routes within intervals containing the reported failure times. Only the C-Lion1 
 threshold; these reconstructed crossings do not establish anchor use or responsibility.</p>
 {eval_block()}
 <h2>Try it</h2>
+<p>Python 3.10 or newer. The bundled examples run offline.</p>
 <pre>git clone {REPO} && cd shadow-ship-check
-pip install -e .
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e .
 ssc case all                 # reference cases, offline
-ssc eval                     # sanctioned-vessel comparison, offline
+ssc eval                     # sanctioned-vessel comparison, offline</pre>
+<p>On Windows, create the environment with <code>py -m venv .venv</code> and activate it with
+<code>.venv\\Scripts\\activate</code> in Command Prompt. Live requests depend on GFW access;
+HTTP 401 requires authentication; 403 means access was denied. Neither means the vessel has no data.
+The client accepts <code>GFW_API_TOKEN</code> for an authorised token;
+it does not guarantee map-track access. See <a href="{REPO}/blob/main/docs/data.md">data and access</a>.</p>
+<pre>ssc search XINGSHUN39        # matching identities, then choose an IMO or MMSI
 ssc check 9224984 --start 2024-11-16 --end 2024-11-19   # known IMO, GFW access required</pre>
 <footer>Vessel data © Global Fishing Watch (CC BY-NC 4.0) · cable routes © OpenStreetMap contributors (ODbL) ·
 sanctions: UK Sanctions List (OGL v3) via OpenSanctions (CC BY-NC 4.0) · land: Natural Earth · code: MIT ·

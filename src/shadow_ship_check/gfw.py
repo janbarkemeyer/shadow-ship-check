@@ -2,11 +2,10 @@
 
 * Vessel search uses the public v3 endpoint ``/vessels/search``.
 * Tracks use ``/vessels/{id}/tracks`` in the compact binary ``VALUE_ARRAY``
-  format - the same request the GFW map makes in the browser. Without a token
-  GFW serves a simplified track (roughly one point every 60-90 minutes on open
-  water, denser near the coast). With a token (``GFW_API_TOKEN``, free for
-  non-commercial use at https://globalfishingwatch.org/our-apis/) more data
-  may be available.
+  format used by the GFW map. The bundled snapshots were collected without a
+  token and contain simplified tracks. The client supports ``GFW_API_TOKEN``,
+  but neither anonymous access nor higher resolution with a token is guaranteed.
+  Documented API access: https://globalfishingwatch.org/our-apis/.
 
 The track endpoint is not part of GFW's documented public API and may change.
 Data licence: CC BY-NC 4.0 - credit Global Fishing Watch, no commercial use
@@ -104,13 +103,28 @@ def identities_from_entries(entries: list, dedupe: bool = True) -> List[Identity
     """
     out: dict = {}
     raw: List[Identity] = []
+    if not isinstance(entries, list):
+        raise ValueError("Vessel search entries must be a list")
     for entry in entries:
         if not isinstance(entry, dict):
             raise ValueError("Vessel search entries must be objects")
         for field in ("registryInfo", "selfReportedInfo"):
-            rows = entry.get(field) or []
+            rows = entry.get(field) if entry.get(field) is not None else []
             if not isinstance(rows, list) or any(not isinstance(r, dict) for r in rows):
                 raise ValueError(f"Invalid vessel identity field {field}")
+            for row in rows:
+                for name in (
+                    "shipname",
+                    "flag",
+                    "ssvid",
+                    "imo",
+                    "callsign",
+                    "id",
+                    "transmissionDateFrom",
+                    "transmissionDateTo",
+                ):
+                    if row.get(name) is not None and not isinstance(row[name], str):
+                        raise ValueError(f"Vessel identity field {name} must be a string or null")
         registry = entry.get("registryInfo") or []
         for s in entry.get("selfReportedInfo") or []:
             ident = Identity(

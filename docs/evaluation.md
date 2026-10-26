@@ -14,7 +14,7 @@ ssc eval
 
 | | Sanctioned | Control |
 |---|---|---|
-| Who | 300 vessels drawn at random (seed 20261026) from the 645 designated under the UK Russia sanctions regime; sample designation dates between 31 Jul 2024 and 8 Oct 2026 | 300 random valid IMO numbers with the same mix of IMO prefixes (first three digits, a rough proxy for build year), not on the UK list, known to GFW |
+| Who | 300 vessels drawn at random (seed 20261026) from the 645 designated under the UK Russia sanctions regime; sample designation dates between 31 Jul 2024 and 8 Oct 2026 | 300 random valid IMO numbers with a similar mix of IMO prefixes (first three digits, a rough proxy for build year), not on the UK list, known to GFW |
 | Reference date | Designation date | A designation date drawn from the sanctioned sample |
 | Data | GFW identity search by IMO, by every MMSI and by the latest name | same |
 
