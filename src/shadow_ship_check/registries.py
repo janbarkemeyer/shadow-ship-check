@@ -172,3 +172,31 @@ def flag_from_mmsi(mmsi: str | None) -> str | None:
     if not mmsi or len(mmsi) != 9:
         return None
     return MID_TO_FLAG.get(mmsi[:3])
+
+
+# Paris MoU flag performance lists 2025 (published 1 July 2026), based on port
+# state inspections and detentions 2023-2025. Black = high / very high risk.
+# Flags with too few inspections in the Paris MoU region are not listed.
+# Source: https://parismou.org (Paris MoU WGB Flag performance list 2025)
+PARIS_MOU_BLACK = {"KNA", "PLW", "TGO", "GNB", "BLZ", "VUT", "VNM", "COM", "TZA", "CMR"}
+PARIS_MOU_GREY = {
+    "KOR", "LTU", "LVA", "IND", "MAR", "SMR", "DZA", "SLE", "THA", "RUS",
+    "LBN", "PHL", "EGY", "VCT", "COK", "ALB", "BGD", "TUV", "TUN",
+}  # fmt: skip
+PARIS_MOU_WHITE = {
+    "CYM", "SWE", "NOR", "DNK", "JPN", "SGP", "FRA", "FIN", "NLD", "LUX", "ITA", "HKG", "DEU", "PRT",
+    "BHS", "MLT", "IMN", "BMU", "CHN", "USA", "MHL", "CYP", "ESP", "GBR", "GRC", "SAU", "IRL", "GIB",
+    "LBR", "HRV", "BRB", "TUR", "EST", "JEY", "ATG", "PAN", "FRO", "BEL", "POL", "CAN",
+}  # fmt: skip
+
+
+def flag_tier(flag: str | None) -> str:
+    """'black', 'grey', 'white' (Paris MoU 2025) or 'unlisted'."""
+    f = (flag or "").upper()
+    if f in PARIS_MOU_BLACK:
+        return "black"
+    if f in PARIS_MOU_GREY:
+        return "grey"
+    if f in PARIS_MOU_WHITE:
+        return "white"
+    return "unlisted"

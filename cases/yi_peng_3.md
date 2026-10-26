@@ -5,7 +5,7 @@
 | Incident | BCS East-West Interlink (Lithuania–Gotland) cut around 10:00 local time on 17 Nov; C-Lion1 (Finland–Germany) lost traffic at 02:00 UTC on 18 Nov |
 | Status | **Suspected.** No charges. Swedish accident investigators said it "cannot be determined with certainty" whether the anchor was dropped deliberately; the ship dragged it for about 180 nm. Swedish prosecutors were not allowed on board. |
 | Hull | IMO 9224984, bulk carrier, China flag, Chinese operator |
-| Tool result | `ssc case yi_peng_3` → **15/100 LOW** ([full report](../reports/yi_peng_3.md)) |
+| Tool result | **5 LOW before the incident**, 15 LOW with full data ([before](../reports/yi_peng_3_before.md), [full](../reports/yi_peng_3.md)) |
 
 ## Identities in Global Fishing Watch
 
@@ -33,7 +33,8 @@ sister ship Yi Peng 5 (control vessel) has the same profile.
 
 ## Warning signals (tool)
 
-`SPEED_DROP`, `REGISTRY_LOST` (only 5 points – confirmation lost in 2016). Identity checks stay silent.
+`SPEED_DROP` (during the incident only), `REGISTRY_LOST` (only 5 points – confirmation lost in 2016).
+Identity checks stay silent; before the incident the ship scores 5 (LOW).
 
 **Lesson:** identity camouflage is not a necessary condition. Yi Peng 3 would only be caught by
 behaviour checks – and those need denser data and cable routes.

@@ -77,7 +77,7 @@ def test_score_bounds(name, fixtures_dir):
 
 def test_cli_case_all(tmp_path, fixtures_dir, capsys):
     assert main(["case", "all", "--fixtures", str(fixtures_dir), "--md", str(tmp_path)]) == 0
-    assert len(list(tmp_path.glob("*.md"))) == len(ALL)
+    assert len(list(tmp_path.glob("*.md"))) == 2 * len(ALL)  # full + before-incident report per case
 
 
 @pytest.mark.parametrize("name", list(CONTROLS))
@@ -91,3 +91,22 @@ def test_incidents_score_above_controls(fixtures_dir):
     worst_control = max(analyze_fixture(c, load_fixture(fixtures_dir / f"{n}.json")).score for n, c in CONTROLS.items())
     flagged = [n for n in CASES if run(n, fixtures_dir).score > worst_control]
     assert set(flagged) >= {"eagle_s", "xingshun_39", "hong_tai_58", "newnew_polar_bear"}
+
+
+def before(name, fixtures_dir):
+    return analyze_fixture(CASES[name], load_fixture(fixtures_dir / f"{name}.json"), before_incident=True)
+
+
+def test_before_incident_uses_no_later_data(fixtures_dir):
+    r = before("newnew_polar_bear", fixtures_dir)
+    assert "BELLE ARIES" not in {i.name for i in r.identities}  # renamed only in 2025
+    assert all(i.end <= CASES["newnew_polar_bear"]["as_of"] for i in r.identities if i.end)
+
+
+def test_identity_tricks_visible_before_the_incident(fixtures_dir):
+    """The thesis: camouflage patterns are observable before the damage happens."""
+    xs = before("xingshun_39", fixtures_dir)
+    assert {"CONCURRENT_IDENTITIES", "IDENTITY_HANDOVER"} <= codes(xs) and xs.level == "HIGH"
+    ht = before("hong_tai_58", fixtures_dir)
+    assert {"PARALLEL_TRACKS", "IDENTITY_HANDOVER", "NAME_ON_OTHER_MMSI"} <= codes(ht) and ht.level == "HIGH"
+    assert before("yi_peng_3", fixtures_dir).level == "LOW"

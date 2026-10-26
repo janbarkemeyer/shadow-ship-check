@@ -18,13 +18,14 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 from .geo import CableLayer, haversine_nm, path_length_nm
 from .models import Identity, Signal, TrackPoint
-from .registries import flag_from_mmsi, is_foc
+from .registries import flag_from_mmsi, flag_tier, is_foc
 
 SPARSE_TRACK_CAVEAT = (
     "Public GFW tracks are simplified (often one point every 60-90 min on open "
     "water). Short gaps and brief manoeuvres can be invisible or exaggerated."
 )
 YEAR = timedelta(days=365)
+TIER_POINTS = {"black": 15, "grey": 10, "white": 5}
 
 
 def _fmt(dt: datetime) -> str:
@@ -97,15 +98,17 @@ def flag_changes(
             continue
         if prev.source == cur.source == "ais" and prev.end - cur.start >= timedelta(days=30):
             continue  # used at the same time -> reported by CONCURRENT_IDENTITIES
-        foc = is_foc(cur.flag)
-        tag = " (flag of convenience)" if foc else ""
-        line = f"{cur.start:%Y-%m-%d}: {prev.flag} -> {cur.flag}{tag}  [{prev.name} -> {cur.name}]"
+        tier = flag_tier(cur.flag)
+        tags = [f"Paris MoU {tier}" if tier != "unlisted" else "not on Paris MoU lists"]
+        if is_foc(cur.flag):
+            tags.append("ITF flag of convenience")
+        line = f"{cur.start:%Y-%m-%d}: {prev.flag} -> {cur.flag} ({', '.join(tags)})  [{prev.name} -> {cur.name}]"
         if cur.start > ref:
             line += "  (after reference date)"
             pts_after += 5
         elif cur.start >= ref - lookback_years * YEAR:
             line += "  (recent)"
-            pts_recent += 15 if foc else 5
+            pts_recent += TIER_POINTS[tier] if tier != "unlisted" else (10 if is_foc(cur.flag) else 5)
         ev.append(line)
     if not ev:
         return []
@@ -115,8 +118,10 @@ def flag_changes(
             title=f"{len(ev)} flag change(s)",
             points=min(30, pts_recent) + min(10, pts_after),
             evidence=ev,
-            caveat=f"Scored: changes in the {lookback_years} years before {ref:%Y-%m-%d} (+15 into a "
-            f"flag of convenience, +5 otherwise) and after it (+5). Sales also cause flag changes.",
+            caveat=f"Scored: changes in the {lookback_years} years before {ref:%Y-%m-%d} by the new flag's Paris MoU "
+            "rating (black +15, grey +10, white +5; unlisted +10 if an ITF flag of convenience, else +5) and changes "
+            "after it (+5). Sales also cause flag changes; most of the world fleet sails under white-listed "
+            "open registries.",
         )
     ]
 

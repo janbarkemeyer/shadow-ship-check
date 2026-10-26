@@ -43,6 +43,17 @@ def _merge_signals(groups: List[List]) -> List:
     return list(out.values())
 
 
+def clip_identities(identities: List[Identity], as_of: datetime) -> List[Identity]:
+    """Only what was observable at ``as_of``: identities that had started, with
+    their last-seen date cut at ``as_of``."""
+    out = []
+    for i in identities:
+        if i.start and i.start > as_of:
+            continue
+        out.append(replace(i, end=min(i.end, as_of) if i.end else i.end))
+    return out
+
+
 def analyze(
     query: str,
     identities: List[Identity],
@@ -56,6 +67,7 @@ def analyze(
     fetched: Optional[Dict[str, Tuple[datetime, datetime]]] = None,
     primary_label: str = "",
     extra_tracks: Optional[Dict[str, List[TrackPoint]]] = None,
+    as_of: Optional[datetime] = None,
 ) -> Report:
     """Run every check.
 
@@ -64,7 +76,18 @@ def analyze(
     too (each separately, so two clones are never stitched into one path).
     ``parallel`` holds all identity tracks for the handover / parallel checks.
     """
-    ref = window[1] if window else None
+    if as_of:
+        # pre-incident view: drop everything GFW recorded after ``as_of``
+        identities = clip_identities(identities, as_of)
+        mmsi_lookups = {m: clip_identities(v, as_of) for m, v in (mmsi_lookups or {}).items()}
+        track = [p for p in track if p.t <= as_of]
+        extra_tracks = {k: [p for p in v if p.t <= as_of] for k, v in (extra_tracks or {}).items()}
+        parallel = {k: [p for p in v if p.t <= as_of] for k, v in (parallel or {}).items()}
+        fetched = {k: (a, min(b, as_of)) for k, (a, b) in (fetched or {}).items()}
+        start = window[0] if window and window[0] < as_of else as_of - timedelta(days=3)
+        window = (start, as_of)
+        incident_time = None
+    ref = window[1] if window else as_of
     sigs = []
     sigs += S.imo_hidden(identities, mmsi_lookups)
     identities = merge_lookup_identities(identities, mmsi_lookups)
@@ -118,6 +141,7 @@ def analyze(
         notes=notes,
         incident_time=incident_time,
         excerpt=excerpt,
+        as_of=as_of,
     )
 
 
@@ -133,7 +157,11 @@ def _day(s: str) -> datetime:
     return datetime.fromisoformat(s).replace(tzinfo=timezone.utc)
 
 
-def analyze_fixture(case: dict, fixture: dict, cables: Optional[CableLayer] = None) -> Report:
+def analyze_fixture(
+    case: dict, fixture: dict, cables: Optional[CableLayer] = None, before_incident: bool = False
+) -> Report:
+    """Re-run a reference case. ``before_incident`` limits the data to what GFW
+    had recorded up to the case's ``as_of`` time (start of the incident)."""
     identities = identities_from_entries(fixture["identities"])
     tracks = {k: [TrackPoint.from_row(r) for r in v["points"]] for k, v in fixture["tracks"].items()}
     lookups = {m: identities_from_entries(e, dedupe=False) for m, e in (fixture.get("mmsi_lookups") or {}).items()}
@@ -157,4 +185,5 @@ def analyze_fixture(case: dict, fixture: dict, cables: Optional[CableLayer] = No
         parallel=parallel,
         cables=cables,
         incident_time=case.get("incident_time"),
+        as_of=(case.get("as_of") or case["window"][1]) if before_incident else None,
     )

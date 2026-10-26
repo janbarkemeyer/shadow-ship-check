@@ -120,6 +120,7 @@ def cmd_check(args) -> int:
         fetched=fetched,
         primary_label=primary if extra else "",
         extra_tracks=extra,
+        as_of=_date(args.as_of) if args.as_of else None,
     )
     _emit(report, args)
     return 0
@@ -137,20 +138,28 @@ def _dedupe(identities: List[Identity]) -> List[Identity]:
 def cmd_case(args) -> int:
     names = list(ALL) if args.name == "all" else [args.name]
     cables = CableLayer.from_geojson(args.cables) if args.cables else None
+    if len(names) > 1:
+        print(f"{'case':20} {'full':>11}   {'before':>11}   scored signals before the incident")
     for n in names:
         if n not in ALL:
             print(f"Unknown case {n!r}. Available: {', '.join(ALL)}", file=sys.stderr)
             return 1
         case = ALL[n]
-        report = analyze_fixture(case, load_fixture(Path(args.fixtures) / f"{n}.json"), cables)
-        if len(names) > 1:
-            if args.md:
-                Path(args.md).mkdir(parents=True, exist_ok=True)
-                Path(args.md, f"{n}.md").write_text(to_markdown(report, case["title"]), encoding="utf-8")
-            scored = ", ".join(f"{s.code}+{s.points}" for s in report.signals if s.points)
-            print(f"{n:20} score {report.score:>3} {report.level:6} {scored}")
-        else:
-            _emit(report, args, case["title"])
+        fixture = load_fixture(Path(args.fixtures) / f"{n}.json")
+        if len(names) == 1:
+            report = analyze_fixture(case, fixture, cables, before_incident=args.before_incident)
+            _emit(report, args, case["title"] + (" (before the incident)" if args.before_incident else ""))
+            continue
+        full = analyze_fixture(case, fixture, cables)
+        before = analyze_fixture(case, fixture, cables, before_incident=True)
+        if args.md:
+            Path(args.md).mkdir(parents=True, exist_ok=True)
+            Path(args.md, f"{n}.md").write_text(to_markdown(full, case["title"]), encoding="utf-8")
+            Path(args.md, f"{n}_before.md").write_text(
+                to_markdown(before, case["title"] + " (before the incident)"), encoding="utf-8"
+            )
+        scored = ", ".join(f"{s.code}+{s.points}" for s in before.signals if s.points)
+        print(f"{n:20} {full.score:>4} {full.level:6}   {before.score:>4} {before.level:6}   {scored}")
     return 0
 
 
@@ -170,6 +179,7 @@ def main(argv=None) -> int:
     c.add_argument("--end", help="window end, YYYY-MM-DD (default: now)")
     c.add_argument("--context-days", type=int, default=3, help="extra days of track loaded around the window")
     c.add_argument("--at", help="incident time (UTC, e.g. 2025-02-24T19:00) - prints the track +/- 3 h")
+    c.add_argument("--as-of", help="ignore everything GFW recorded after this time (UTC) - a pre-incident view")
     c.add_argument("--cables", help="GeoJSON with cable routes (LineString features)")
     c.add_argument("--no-mmsi-lookup", action="store_true", help="skip the extra search for MMSI reuse")
     c.add_argument(
@@ -188,6 +198,11 @@ def main(argv=None) -> int:
     k.add_argument("--cables")
     k.add_argument("--md", help="Markdown output file (a directory when name is 'all')")
     k.add_argument("--json")
+    k.add_argument(
+        "--before-incident",
+        action="store_true",
+        help="use only data GFW had recorded before the incident (the case's 'as_of' time)",
+    )
     k.set_defaults(func=cmd_case)
 
     args = p.parse_args(argv)

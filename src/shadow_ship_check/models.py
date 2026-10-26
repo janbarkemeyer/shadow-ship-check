@@ -103,6 +103,7 @@ class Report:
     notes: List[str] = field(default_factory=list)
     incident_time: Optional[datetime] = None
     excerpt: List[tuple] = field(default_factory=list)  # (identity label, TrackPoint)
+    as_of: Optional[datetime] = None  # data cut-off for a pre-incident view
 
     @property
     def score(self) -> int:

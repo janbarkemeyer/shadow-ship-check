@@ -28,13 +28,13 @@ _Indicators only - not evidence of sabotage or any other wrongdoing. Data: Globa
 > * = in use during the look-back period (scored); others are history.
 
 ### 5 flag change(s)  `FLAG_CHANGE` (+10)
-- 2014-03-13: LBR -> MLT (flag of convenience)  [REINBEK -> REINBEK]
-- 2016-03-07: MLT -> LBR (flag of convenience)  [REINBEK -> REINBEK]
-- 2017-04-28: LBR -> CYP (flag of convenience)  [REINBEK -> BALTIC FULMAR]
-- 2023-06-20: CYP -> HKG  [BALTIC FULMAR -> NEWNEW POLAR BEAR]  (recent)
-- 2025-03-11: HKG -> PAN (flag of convenience)  [NEWNEW POLAR BEAR -> BELLE ARIES]  (after reference date)
+- 2014-03-13: LBR -> MLT (Paris MoU white, ITF flag of convenience)  [REINBEK -> REINBEK]
+- 2016-03-07: MLT -> LBR (Paris MoU white, ITF flag of convenience)  [REINBEK -> REINBEK]
+- 2017-04-28: LBR -> CYP (Paris MoU white, ITF flag of convenience)  [REINBEK -> BALTIC FULMAR]
+- 2023-06-20: CYP -> HKG (Paris MoU white)  [BALTIC FULMAR -> NEWNEW POLAR BEAR]  (recent)
+- 2025-03-11: HKG -> PAN (Paris MoU white, ITF flag of convenience)  [NEWNEW POLAR BEAR -> BELLE ARIES]  (after reference date)
 
-> Scored: changes in the 3 years before 2023-10-08 (+15 into a flag of convenience, +5 otherwise) and after it (+5). Sales also cause flag changes.
+> Scored: changes in the 3 years before 2023-10-08 by the new flag's Paris MoU rating (black +15, grey +10, white +5; unlisted +10 if an ITF flag of convenience, else +5) and changes after it (+5). Sales also cause flag changes; most of the world fleet sails under white-listed open registries.
 
 ### Registry confirmation lost - identity in use is self-reported only  `REGISTRY_LOST` (+15)
 - last confirmed: BALTIC FULMAR / CYP / MMSI 210925000 (2017-04-28 - 2023-06-20, registry + AIS)

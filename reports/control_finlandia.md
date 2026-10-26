@@ -20,9 +20,9 @@ _Indicators only - not evidence of sabotage or any other wrongdoing. Data: Globa
 > * = in use during the look-back period (scored); others are history.
 
 ### 1 flag change(s)  `FLAG_CHANGE` (+0)
-- 2012-03-08: ITA -> FIN  [MOBY FREEDOM -> FINLANDIA]
+- 2012-03-08: ITA -> FIN (Paris MoU white)  [MOBY FREEDOM -> FINLANDIA]
 
-> Scored: changes in the 3 years before 2024-12-28 (+15 into a flag of convenience, +5 otherwise) and after it (+5). Sales also cause flag changes.
+> Scored: changes in the 3 years before 2024-12-28 by the new flag's Paris MoU rating (black +15, grey +10, white +5; unlisted +10 if an ITF flag of convenience, else +5) and changes after it (+5). Sales also cause flag changes; most of the world fleet sails under white-listed open registries.
 
 ### Low speed (<= 3 kn) for 2 h or more  `SLOW_LOITERING` (+0)
 - 2024-12-23 01:19 UTC -> 2024-12-23 03:40 UTC: 2.3 h stationary (anchored or drifting), mean AIS speed 0.8 kn, path 0.1 nm, net 0.1 nm, at 59.445,24.763

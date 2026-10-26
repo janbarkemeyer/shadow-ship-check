@@ -23,7 +23,7 @@ Identity history is weighed by how close it is to that date:
 | Code | Rule | Points | Why it matters | Typical false positive |
 |---|---|---|---|---|
 | `MULTI_IDENTITY` | Distinct name/flag combinations under one IMO in the look-back period | +10 per extra identity, max 30 | Name changes break the link to a ship's history | Ordinary sales; a new MMSI under the same name does not count |
-| `FLAG_CHANGE` | Successive identities with different flags | +15 into a flag of convenience, +5 otherwise, max 30; +5 after the reference date | Open registries are where shadow fleets go | Sales to owners who use open registries for normal business |
+| `FLAG_CHANGE` | Successive identities with different flags | By the new flag's Paris MoU 2025 rating: black +15, grey +10, white +5; not listed +10 if an ITF flag of convenience, else +5; max 30. +5 per change after the reference date | Poorly performing registries are where shadow fleets go | Ordinary sales – most of the world fleet sails under white-listed open registries (Liberia, Panama, Marshall Islands), which is why they score only 5 |
 | `REGISTRY_LOST` / `NO_REGISTRY` | The identity in use is only self-reported AIS, while earlier ones were registry-confirmed (or none ever was) | +15 (+5 if lost > 5 years ago) / +10 | Without a registry match nobody vouches for the identity | GFW's public registry coverage is incomplete; logged-in users see 11 more sources |
 | `MMSI_FLAG_MISMATCH` | MMSI country prefix (MID) does not match the broadcast flag | +10 each, max 20 | Self-assigned or copied MMSIs | Second registers (e.g. German GIS) |
 | `MMSI_REUSE` | The hull's MMSI was also used by unrelated ships | +15 if within 2 years, else +5 | Recycled or fraudulent numbers from small registries | Legitimate re-assignment after many years |
@@ -57,21 +57,39 @@ vessels sailing in the same waters and time windows as the incident ships:
   → `MULTI_IDENTITY` now counts name/flag combinations, and same-name concurrency scores only 5.
 * *Yi Peng 5* (sister ship of Yi Peng 3) – unchanged.
 
-Result after calibration (`ssc case all`):
+A fourth adjustment came from a review of the whole project: flag changes were first scored by the ITF
+"flag of convenience" list alone. That list includes Liberia, Panama and the Marshall Islands, which
+carry a large share of the world fleet, so an ordinary sale scored as high as a move to Togo. Flags are
+now weighted by the Paris MoU performance list (detentions in European ports); a unit test checks that
+an ordinary Greek-to-Liberia sale stays LOW.
 
-| Ship | Role | Score | Level |
+## Before the incident vs. full data
+
+The tool can cut off all data recorded after a given time (`--as-of`, or `ssc case … --before-incident`
+with the cut-off stored per case). Identities that started later are dropped, last-seen dates are
+clipped, tracks end at the cut-off. This is the relevant test of the idea – a check is only useful if it
+flags the ship before the damage. One kind of hindsight remains: GFW linked AIS identities to hulls
+with today's knowledge.
+
+Result (`ssc case all`):
+
+| Ship | Role | Before incident | Full data |
 |---|---|---|---|
-| Xingshun 39 | incident | 100 | HIGH |
-| Hong Tai 58 | incident | 100 | HIGH |
-| Eagle S | incident | 60 | HIGH |
-| NewNew Polar Bear | incident | 35 | MEDIUM |
-| Yi Peng 3 | incident | 15 | LOW |
-| Ever Liven | control | 5 | LOW |
-| Yi Peng 5 | control | 5 | LOW |
-| Finlandia | control | 0 | LOW |
+| Xingshun 39 | incident | 100 HIGH | 100 HIGH |
+| Hong Tai 58 | incident | 100 HIGH | 100 HIGH |
+| Eagle S | incident | 50 HIGH | 55 HIGH |
+| NewNew Polar Bear | incident | 30 MEDIUM | 35 MEDIUM |
+| Yi Peng 3 | incident | 5 LOW | 15 LOW |
+| Ever Liven | control | 5 LOW | 5 LOW |
+| Yi Peng 5 | control | 5 LOW | 5 LOW |
+| Finlandia | control | 0 LOW | 0 LOW |
 
-**Caveat.** Eight ships are a sanity check, not a validation. The controls were used to tune the rules,
-so they are not an independent test set. A real evaluation needs a few hundred ordinary ships in the
+Eagle S keeps an `AIS_GAP` before the incident because GFW has no positions after 11 Dec 2024. That is
+most likely a coverage gap, not a switched-off transponder (see the case file); without it the ship
+would score 35 (MEDIUM).
+
+**Caveat.** Eight ships are a sanity check, not a validation. The rules were written with these incidents
+in mind and the controls were used to tune them, so neither is an independent test set. A real evaluation needs a few hundred ordinary ships in the
 same regions (expected: mostly LOW) and more incident ships, scored without further tuning.
 
 Yi Peng 3 is the honest miss: no identity camouflage at all. Its behaviour (≈ 1.5 days of reduced speed

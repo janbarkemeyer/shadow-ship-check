@@ -17,6 +17,8 @@ def to_markdown(r: Report, title: str | None = None) -> str:
     out.append(f"**Score: {r.score}/100 ({r.level})**  ")
     if r.window:
         out.append(f"Analysis window: {r.window[0]:%Y-%m-%d %H:%M} - {r.window[1]:%Y-%m-%d %H:%M} UTC  ")
+    if r.as_of:
+        out.append(f"Data cut-off: {r.as_of:%Y-%m-%d %H:%M} UTC - only what GFW had recorded before this time  ")
     out.append(f"_{DISCLAIMER}_")
     out += [
         "",
@@ -63,7 +65,8 @@ def to_markdown(r: Report, title: str | None = None) -> str:
 
 
 def to_text(r: Report) -> str:
-    lines = [f"Shadow Ship Check - {r.query}", f"Score {r.score}/100 ({r.level})", ""]
+    cut = f" (data until {r.as_of:%Y-%m-%d %H:%M} UTC)" if r.as_of else ""
+    lines = [f"Shadow Ship Check - {r.query}", f"Score {r.score}/100 ({r.level}){cut}", ""]
     lines.append("Identities:")
     lines += [f"  - {i.label()}" for i in r.identities]
     lines.append("")
@@ -82,6 +85,7 @@ def to_json(r: Report) -> str:
         "score": r.score,
         "level": r.level,
         "window": [w.isoformat() for w in r.window] if r.window else None,
+        "as_of": r.as_of.isoformat() if r.as_of else None,
         "identities": [asdict(i) for i in r.identities],
         "signals": [asdict(s) for s in r.signals],
         "notes": r.notes,

@@ -24,9 +24,9 @@ _Indicators only - not evidence of sabotage or any other wrongdoing. Data: Globa
 > * = in use during the look-back period (scored); others are history.
 
 ### 1 flag change(s)  `FLAG_CHANGE` (+15)
-- 2023-07-31: CHN -> TGO (flag of convenience)  [DONGSHUN3 -> HONGTAI58]  (recent)
+- 2023-07-31: CHN -> TGO (Paris MoU black, ITF flag of convenience)  [DONGSHUN3 -> HONGTAI58]  (recent)
 
-> Scored: changes in the 3 years before 2025-02-26 (+15 into a flag of convenience, +5 otherwise) and after it (+5). Sales also cause flag changes.
+> Scored: changes in the 3 years before 2025-02-26 by the new flag's Paris MoU rating (black +15, grey +10, white +5; unlisted +10 if an ITF flag of convenience, else +5) and changes after it (+5). Sales also cause flag changes; most of the world fleet sails under white-listed open registries.
 
 ### Registry confirmation lost - identity in use is self-reported only  `REGISTRY_LOST` (+15)
 - last confirmed: DONGSHUN3 / CHN / MMSI 413762751 (2022-10-27 - 2023-09-05, registry record)

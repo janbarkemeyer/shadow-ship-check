@@ -19,6 +19,8 @@ CASES = {
         "Helsinki District Court dismissed the case for lack of jurisdiction (appeal possible).",
         "window": (_utc("2024-12-23T00:00"), _utc("2024-12-28T23:59")),
         "primary_track": "eagle_s",
+        # data cut-off for the pre-incident score: Estlink 2 failure
+        "as_of": _utc("2024-12-25T10:26"),
         "incident_time": _utc("2024-12-25T10:26"),
         "parallel": [],
     },
@@ -31,6 +33,9 @@ CASES = {
         "it was then allowed to continue to South Korea.",
         "window": (_utc("2025-01-02T00:00"), _utc("2025-01-05T00:00")),
         "primary_track": "xingshun_39",
+        # data cut-off for the pre-incident score (conservative): the CGA got the damage report on
+        # 3 Jan 04:40 UTC and said the ship had left the area about nine hours before that
+        "as_of": _utc("2025-01-02T12:00"),
         "parallel": ["xingshun_39", "shunxing39_cmr"],
         "movement_tracks": ["shunxing39_cmr"],
         # CGA: ship had left the damage area ~9 h before the 16:40 (UTC+8) interception
@@ -51,6 +56,8 @@ CASES = {
         "intentionally damaging the cable (first instance).",
         "window": (_utc("2025-02-22T00:00"), _utc("2025-02-26T00:00")),
         "primary_track": "hong_tai_58",
+        # data cut-off for the pre-incident score: 00:00 local on 25 Feb; the break was reported for the early morning
+        "as_of": _utc("2025-02-24T16:00"),
         "incident_time": _utc("2025-02-24T19:03"),
         "parallel": ["hong_tai_58_dec", "hong_tai_58_imo_identity", "hongta_8", "hongta8_noimo"],
         "track_labels": {
@@ -69,6 +76,8 @@ CASES = {
         "were reported to assess the damage as accidental.",
         "window": (_utc("2024-11-16T12:00"), _utc("2024-11-18T18:00")),
         "primary_track": "yi_peng_3",
+        # data cut-off for the pre-incident score: BCS East-West Interlink cut around 10:00 local (EET)
+        "as_of": _utc("2024-11-17T08:00"),
         "incident_time": _utc("2024-11-18T02:00"),
         "parallel": [],
     },
@@ -81,6 +90,8 @@ CASES = {
         "Chinese investigation acknowledged the damage but called it an accident in a storm.",
         "window": (_utc("2023-10-07T12:00"), _utc("2023-10-08T06:00")),
         "primary_track": "newnew_polar_bear",
+        # data cut-off for the pre-incident score: about two hours before the approximate rupture time
+        "as_of": _utc("2023-10-07T20:00"),
         "incident_time": _utc("2023-10-07T22:20"),
         "parallel": [],
     },

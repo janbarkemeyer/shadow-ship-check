@@ -1,6 +1,6 @@
 # Eagle S - Estlink 2 and telecom cables, Gulf of Finland
 
-**Score: 60/100 (HIGH)**  
+**Score: 55/100 (HIGH)**  
 Analysis window: 2024-12-23 00:00 - 2024-12-28 23:59 UTC  
 _Indicators only - not evidence of sabotage or any other wrongdoing. Data: Global Fishing Watch (CC BY-NC 4.0)._
 
@@ -19,10 +19,10 @@ _Indicators only - not evidence of sabotage or any other wrongdoing. Data: Globa
 
 > * = in use during the look-back period (scored); others are history.
 
-### 1 flag change(s)  `FLAG_CHANGE` (+15)
-- 2023-07-22: MHL -> COK (flag of convenience)  [NORSTAR INTREPID -> EAGLE-S]  (recent)
+### 1 flag change(s)  `FLAG_CHANGE` (+10)
+- 2023-07-22: MHL -> COK (Paris MoU grey, ITF flag of convenience)  [NORSTAR INTREPID -> EAGLE-S]  (recent)
 
-> Scored: changes in the 3 years before 2024-12-28 (+15 into a flag of convenience, +5 otherwise) and after it (+5). Sales also cause flag changes.
+> Scored: changes in the 3 years before 2024-12-28 by the new flag's Paris MoU rating (black +15, grey +10, white +5; unlisted +10 if an ITF flag of convenience, else +5) and changes after it (+5). Sales also cause flag changes; most of the world fleet sails under white-listed open registries.
 
 ### Registry confirmation lost - identity in use is self-reported only  `REGISTRY_LOST` (+15)
 - last confirmed: NORSTAR INTREPID / MHL / MMSI 538003031 (2012-01-26 - 2023-07-22, registry + AIS)

@@ -26,14 +26,14 @@ def ident(name, flag, mmsi, start_days, end_days, confirmed=False, source="ais")
     )
 
 
-def test_flag_change_into_foc_scores_and_old_history_does_not():
+def test_recent_flag_change_scores_by_paris_mou_tier_and_old_history_does_not():
     ids = [
         ident("OLD", "GRC", "240000000", -3000, -2500),
         ident("MID", "LBR", "636000000", -2500, -100),
         ident("NEW", "COK", "518000000", -100, 10),
     ]
     sig = flag_changes(ids, ref=T0)[0]
-    assert sig.points == 15  # only LBR -> COK is recent; GRC -> LBR is > 3 years old
+    assert sig.points == 10  # only LBR -> COK (Paris MoU grey) is recent; GRC -> LBR is > 3 years old
     assert any("(recent)" in e for e in sig.evidence)
 
 
@@ -76,3 +76,22 @@ def test_no_handover_at_edge_of_requested_range():
     b = _track(25.0, 121.0, 5, 10)
     fetched = {"a": (T0, T0 + timedelta(hours=4.5)), "b": (T0 + timedelta(hours=5), T0 + timedelta(days=1))}
     assert identity_handover({"a": a, "b": b}, fetched) == []
+
+
+def test_flag_tiers():
+    to = lambda flag: [ident("A", "GRC", "240000000", -400, -200), ident("B", flag, "1", -200, 10)]  # noqa: E731
+    assert flag_changes(to("TGO"), ref=T0)[0].points == 15  # black
+    assert flag_changes(to("COK"), ref=T0)[0].points == 10  # grey
+    assert flag_changes(to("LBR"), ref=T0)[0].points == 5  # white
+    assert flag_changes(to("GAB"), ref=T0)[0].points == 10  # unlisted, ITF flag of convenience
+    assert flag_changes(to("GUY"), ref=T0)[0].points == 5  # unlisted, not on the ITF list
+
+
+def test_ordinary_sale_to_open_registry_stays_low():
+    """A Greek ship sold and reflagged to Liberia, registry-confirmed both times."""
+    from shadow_ship_check.analyze import analyze
+
+    ids = [ident("ATHINA", "GRC", "240000001", -3000, -400, confirmed=True),
+           ident("OCEAN STAR", "LBR", "636000001", -400, 30, confirmed=True)]  # fmt: skip
+    r = analyze("test", ids, [], window=(T0 - timedelta(days=3), T0))
+    assert r.level == "LOW", [(s.code, s.points) for s in r.signals]

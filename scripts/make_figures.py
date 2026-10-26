@@ -176,40 +176,40 @@ def fig_hongtai(polys):
 
 
 def fig_scores():
-    import subprocess
+    from shadow_ship_check.analyze import analyze_fixture, load_fixture
+    from shadow_ship_check.cases import ALL
 
-    rows = subprocess.run(
-        [sys.executable, "-m", "shadow_ship_check", "case", "all", "--md", "/tmp/ssc_fig"],
-        capture_output=True,
-        text=True,
-        cwd=ROOT,
-        env={"PYTHONPATH": str(ROOT / "src")},
-    ).stdout
-    data = [(line.split()[0], int(line.split()[2])) for line in rows.splitlines() if " score " in line]
-    names = {
-        "eagle_s": "Eagle S",
-        "xingshun_39": "Xingshun 39",
-        "hong_tai_58": "Hong Tai 58",
-        "yi_peng_3": "Yi Peng 3",
-        "newnew_polar_bear": "NewNew Polar Bear",
-        "control_finlandia": "Finlandia (control)",
-        "control_yi_peng_5": "Yi Peng 5 (control)",
-        "control_ever_liven": "Ever Liven (control)",
-    }
-    data.sort(key=lambda r: r[1])
-    fig, ax = plt.subplots(figsize=(6.4, 3.2), dpi=160)
-    colors = [MUTED if n.startswith("control") else C1 for n, _ in data]
-    ax.barh([names[n] for n, _ in data], [s for _, s in data], color=colors, height=0.6)
-    for i, (_, s) in enumerate(data):
-        ax.text(s + 1.5, i, str(s), va="center", fontsize=8, color=INK)
+    names = {"eagle_s": "Eagle S", "xingshun_39": "Xingshun 39", "hong_tai_58": "Hong Tai 58", "yi_peng_3": "Yi Peng 3",
+             "newnew_polar_bear": "NewNew Polar Bear", "control_finlandia": "Finlandia (control)",
+             "control_yi_peng_5": "Yi Peng 5 (control)", "control_ever_liven": "Ever Liven (control)"}  # fmt: skip
+    rows = []
+    for key, case in ALL.items():
+        fx = load_fixture(ROOT / "data" / "fixtures" / f"{key}.json")
+        rows.append((key, analyze_fixture(case, fx, before_incident=True).score, analyze_fixture(case, fx).score))
+    rows.sort(key=lambda r: (r[1], r[2]))
+    fig, ax = plt.subplots(figsize=(6.6, 3.6), dpi=160)
+    y = range(len(rows))
+    ctrl = [k.startswith("control") for k, _, _ in rows]
+    ax.barh([i + 0.18 for i in y], [f for _, _, f in rows], height=0.34, color=GRID, label="full data")
+    ax.barh([i - 0.18 for i in y], [b for _, b, _ in rows], height=0.34,
+            color=[MUTED if c else C1 for c in ctrl], label="before the incident")  # fmt: skip
+    for i, (_, b, _f) in enumerate(rows):
+        ax.text(b + 1.5, i - 0.18, str(b), va="center", fontsize=7.5, color=INK)
+    ax.set_yticks(list(y), [names[k] for k, _, _ in rows])
     for x, lab in ((20, "MEDIUM"), (50, "HIGH")):
-        ax.axvline(x, color=GRID, lw=1, zorder=0)
-        ax.text(x + 1, len(data) - 0.4, lab, fontsize=7, color=MUTED)
+        ax.axvline(x, color="#cbd2d9", lw=0.8, zorder=0, ls="--")
+        ax.text(x + 1, len(rows) - 0.45, lab, fontsize=7, color=MUTED)
     ax.set_xlim(0, 110)
     ax.tick_params(colors=INK, labelsize=8)
-    for s in ("top", "right"):
-        ax.spines[s].set_visible(False)
-    ax.set_title("Score per ship (incident ships blue, controls grey)", fontsize=10, color=INK, loc="left")
+    for sp in ("top", "right"):
+        ax.spines[sp].set_visible(False)
+    from matplotlib.patches import Patch
+
+    handles = [Patch(color=C1, label="incident ship, before the incident"),
+               Patch(color=MUTED, label="control vessel"), Patch(color=GRID, label="with full data")]  # fmt: skip
+    ax.legend(handles=handles, loc="lower right", fontsize=7.5, frameon=False)
+    ax.set_title("Score per ship: before the incident (bars with numbers) and with full data", fontsize=9.5,
+                 color=INK, loc="left")  # fmt: skip
     fig.tight_layout()
     fig.savefig(OUT / "scores.png")
 

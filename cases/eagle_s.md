@@ -5,7 +5,7 @@
 | Incident | Estlink 2 power cable (Finland–Estonia) failed at 12:26 EET (10:26 UTC); telecom cables in the area were damaged too |
 | Status | **Suspected.** Finland seized the tanker and charged the captain and two officers (Aug 2025). On 3 Oct 2025 the Helsinki District Court dismissed the case for lack of jurisdiction; the decision can be appealed. |
 | Hull | IMO 9329760, oil products tanker, Cook Islands flag, linked to Russia's "shadow fleet" in reporting |
-| Tool result | `ssc case eagle_s` → **60/100 HIGH** ([full report](../reports/eagle_s.md)) |
+| Tool result | **50 HIGH before the incident**, 55 HIGH with full data ([before](../reports/eagle_s_before.md), [full](../reports/eagle_s.md)) |
 
 ## Identities in Global Fishing Watch
 
@@ -32,8 +32,9 @@ Mediterranean, West Africa and India (GFW map, full period).
 
 ## Warning signals (tool)
 
-`MULTI_IDENTITY` (2), `FLAG_CHANGE` (Marshall Islands → Cook Islands, flag of convenience),
+`MULTI_IDENTITY` (2), `FLAG_CHANGE` (Marshall Islands, Paris MoU white list → Cook Islands, grey list),
 `REGISTRY_LOST` (registry confirmation ended with the flag change), `AIS_GAP` (window empty).
+Before the incident the gap since 11 Dec still counts (+15); without it the ship would score 35 (MEDIUM).
 
 ## Open questions
 

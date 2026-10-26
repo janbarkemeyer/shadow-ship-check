@@ -5,7 +5,7 @@
 | Incident | Balticconnector gas pipeline (Finland–Estonia) ruptured in the night of 7 to 8 Oct 2023 |
 | Status | **Suspected.** Finland's National Bureau of Investigation matched the anchor recovered at the rupture to the ship. In Aug 2024 a Chinese investigation acknowledged the damage but called it an accident caused by a storm. |
 | Hull | IMO 9313204, container ship, Hong Kong flag at the time, Chinese operator |
-| Tool result | `ssc case newnew_polar_bear` → **35/100 MEDIUM** ([full report](../reports/newnew_polar_bear.md)) |
+| Tool result | **30 MEDIUM before the incident**, 35 MEDIUM with full data ([before](../reports/newnew_polar_bear_before.md), [full](../reports/newnew_polar_bear.md)) |
 
 ## Identities in Global Fishing Watch
 

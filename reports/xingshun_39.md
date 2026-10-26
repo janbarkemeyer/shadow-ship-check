@@ -24,9 +24,9 @@ _Indicators only - not evidence of sabotage or any other wrongdoing. Data: Globa
 > * = in use during the look-back period (scored); others are history.
 
 ### 1 flag change(s)  `FLAG_CHANGE` (+15)
-- 2024-03-04: CMR -> TZA (flag of convenience)  [BAOLONG36 -> XINGSHUN39]  (recent)
+- 2024-03-04: CMR -> TZA (Paris MoU black, ITF flag of convenience)  [BAOLONG36 -> XINGSHUN39]  (recent)
 
-> Scored: changes in the 3 years before 2025-01-05 (+15 into a flag of convenience, +5 otherwise) and after it (+5). Sales also cause flag changes.
+> Scored: changes in the 3 years before 2025-01-05 by the new flag's Paris MoU rating (black +15, grey +10, white +5; unlisted +10 if an ITF flag of convenience, else +5) and changes after it (+5). Sales also cause flag changes; most of the world fleet sails under white-listed open registries.
 
 ### No identity of this hull is confirmed by a registry in GFW  `NO_REGISTRY` (+10)
 - in use at 2025-01-05: XINGSHUN39 / TZA / MMSI 677087200 (2024-03-04 - 2025-08-14, self-reported AIS only)
