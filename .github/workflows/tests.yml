@@ -15,4 +15,8 @@ jobs:
       - run: ruff check src tests scripts
       - run: ruff format --check src tests scripts
       - run: pytest -q
-      - run: ssc case all --md reports
+      - name: reference cases (committed reports must be up to date)
+        run: |
+          ssc case all --md reports
+          git diff --exit-code reports/
+      - run: ssc eval

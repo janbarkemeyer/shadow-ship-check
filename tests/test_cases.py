@@ -5,6 +5,7 @@ import pytest
 from shadow_ship_check.analyze import analyze_fixture, load_fixture
 from shadow_ship_check.cases import ALL, CASES, CONTROLS
 from shadow_ship_check.cli import main
+from shadow_ship_check.geo import CableLayer
 
 
 def run(name, fixtures_dir):
@@ -77,13 +78,15 @@ def test_score_bounds(name, fixtures_dir):
 
 def test_cli_case_all(tmp_path, fixtures_dir, capsys):
     assert main(["case", "all", "--fixtures", str(fixtures_dir), "--md", str(tmp_path)]) == 0
-    assert len(list(tmp_path.glob("*.md"))) == 2 * len(ALL)  # full + before-incident report per case
+    assert len(list(tmp_path.glob("*.md"))) == len(ALL)  # one combined report per case
+    text = (tmp_path / "hong_tai_58.md").read_text()
+    assert "Before the incident" in text and "Full data" in text
 
 
 @pytest.mark.parametrize("name", list(CONTROLS))
 def test_controls_stay_low(name, fixtures_dir):
     """Ordinary ships in the same waters must not be flagged."""
-    r = analyze_fixture(CONTROLS[name], load_fixture(fixtures_dir / f"{name}.json"))
+    r = analyze_fixture(CONTROLS[name], load_fixture(fixtures_dir / f"{name}.json"), CableLayer.bundled())
     assert r.level == "LOW", [(s.code, s.points) for s in r.signals]
 
 
@@ -110,3 +113,18 @@ def test_identity_tricks_visible_before_the_incident(fixtures_dir):
     ht = before("hong_tai_58", fixtures_dir)
     assert {"PARALLEL_TRACKS", "IDENTITY_HANDOVER", "NAME_ON_OTHER_MMSI"} <= codes(ht) and ht.level == "HIGH"
     assert before("yi_peng_3", fixtures_dir).level == "LOW"
+
+
+def test_bundled_cables_slow_crossings(fixtures_dir):
+    """With the OpenStreetMap cable layer: Yi Peng 3 crosses C-Lion1 at reduced speed around the
+    reported failure time, the Helsinki-Tallinn ferry crosses cables only at cruising speed."""
+    cables = CableLayer.bundled()
+
+    def signals(name):
+        r = analyze_fixture(ALL[name], load_fixture(fixtures_dir / f"{name}.json"), cables)
+        return {s.code: s for s in r.signals}
+
+    yp = signals("yi_peng_3")["CABLE_CROSSING_SLOW"]
+    assert any("C-Lion 1" in e and "2024-11-18 01:39" in e for e in yp.evidence)
+    assert "CABLE_CROSSING_SLOW" not in signals("control_finlandia")
+    assert "CABLE_CROSSING_SLOW" in signals("xingshun_39")

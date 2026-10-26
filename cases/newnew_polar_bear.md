@@ -5,7 +5,7 @@
 | Incident | Balticconnector gas pipeline (Finland–Estonia) ruptured in the night of 7 to 8 Oct 2023 |
 | Status | **Suspected.** Finland's National Bureau of Investigation matched the anchor recovered at the rupture to the ship. In Aug 2024 a Chinese investigation acknowledged the damage but called it an accident caused by a storm. |
 | Hull | IMO 9313204, container ship, Hong Kong flag at the time, Chinese operator |
-| Tool result | **30 MEDIUM before the incident**, 35 MEDIUM with full data ([before](../reports/newnew_polar_bear_before.md), [full](../reports/newnew_polar_bear.md)) |
+| Tool result | **30 MEDIUM before the incident**, 35 MEDIUM with full data ([report](../reports/newnew_polar_bear.md)) |
 
 ## Identities in Global Fishing Watch
 
@@ -21,8 +21,8 @@ sale. Renamed and reflagged again (Panama) in March 2025.
 
 ## What the track shows
 
-* GFW positions roughly every 90 minutes. Between 21:48 and 23:48 UTC on 7 Oct the ship crosses the
-  Balticconnector area (59.65 N, 23.89 E → 59.75 N, 24.62 E) at a steady 11–12 kn.
+* GFW positions roughly every 90 minutes. Between 22:15 and 23:48 UTC on 7 Oct the track crosses the
+  Balticconnector route (OpenStreetMap) at a steady 11–12 kn – the rupture is dated to about 22:20 UTC.
 * No slowdown, no loop, no gap around the incident in GFW. The damage pattern (anchor dragged along the
   seabed) is not visible in a position track at this resolution.
 * 4-hour gap on 7 Oct (13:16–17:16 UTC, 37 nm at a plausible speed) – most likely reception, not scored.
@@ -30,11 +30,12 @@ sale. Renamed and reflagged again (Panama) in March 2025.
 ## Warning signals (tool)
 
 `MULTI_IDENTITY`, `FLAG_CHANGE` (Cyprus → Hong Kong 2023, Hong Kong → Panama after the incident),
-`REGISTRY_LOST`.
+`REGISTRY_LOST`. `CABLE_CROSSING_SLOW` does not fire: the ship crossed the pipeline at cruising speed.
+An anchor dragged at full speed is invisible to a speed-based rule.
 
 ## Open questions
 
-1. The exact time of the rupture (we use ~22:20 UTC as an approximation) and the crossing point.
+1. The exact time of the rupture (we use ~22:20 UTC as an approximation) and the exact crossing point.
 2. Why did the Panama reflagging happen in March 2025, and who owns BELLE ARIES?
 
 ## Sources

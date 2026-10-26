@@ -6,7 +6,7 @@
 | Reported | Early morning of 25 Feb 2025 (local time, UTC+8); the coast guard detained the ship the same day |
 | Status | **Captain convicted.** On 12 Jun 2025 a court in Tainan sentenced the Chinese captain to three years for intentionally damaging the cable (first instance; he denied intent). |
 | Hull | Cargo ship broadcasting as HONGTAI58 (Togo, MMSI 671756000) **without IMO**; GFW links this identity to IMO 8357069 by name and MMSI. Eight Chinese crew |
-| Tool result | **100 HIGH before the incident**, 100 with full data ([before](../reports/hong_tai_58_before.md), [full](../reports/hong_tai_58.md)) |
+| Tool result | **100 HIGH before the incident**, 100 with full data ([report](../reports/hong_tai_58.md)) |
 
 ## Identities in Global Fishing Watch
 
@@ -46,12 +46,15 @@ detained hull.
   detained.
 * Before that, the identity lay off Kaohsiung for about five weeks.
 
+![Hong Tai 58 track, 20-25 Feb 2025](../docs/img/hongtai58_anchorage.png)
+
 ## Warning signals (tool)
 
 `MULTI_IDENTITY` (4), `FLAG_CHANGE` (China → Togo), `REGISTRY_LOST`, `MMSI_REUSE`, `NAME_ON_OTHER_MMSI`,
-`IMO_HIDDEN`, `CONCURRENT_IDENTITIES`, `IDENTITY_HANDOVER`, `PARALLEL_TRACKS`, `SPEED_DROP`.
-`SLOW_LOITERING` lists the 56 h anchorage but does not score it (anchoring is only scored together
-with a cable layer, see `--cables`).
+`IMO_HIDDEN`, `CONCURRENT_IDENTITIES`, `IDENTITY_HANDOVER`, `PARALLEL_TRACKS`, `SPEED_DROP`,
+`CABLE_CROSSING_SLOW` (an unnamed pipeline crossed at 4 kn on 22 Feb, on the way to the anchorage).
+`SLOW_LOITERING` lists the 56 h anchorage but does not score it. TPKM-3 is not in OpenStreetMap, so the
+tool cannot test the anchorage against the damaged cable.
 
 ## Open questions
 

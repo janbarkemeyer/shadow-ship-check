@@ -5,7 +5,7 @@
 | Incident | Estlink 2 power cable (Finland–Estonia) failed at 12:26 EET (10:26 UTC); telecom cables in the area were damaged too |
 | Status | **Suspected.** Finland seized the tanker and charged the captain and two officers (Aug 2025). On 3 Oct 2025 the Helsinki District Court dismissed the case for lack of jurisdiction; the decision can be appealed. |
 | Hull | IMO 9329760, oil products tanker, Cook Islands flag, linked to Russia's "shadow fleet" in reporting |
-| Tool result | **50 HIGH before the incident**, 55 HIGH with full data ([before](../reports/eagle_s_before.md), [full](../reports/eagle_s.md)) |
+| Tool result | **50 HIGH before the incident**, 55 HIGH with full data ([report](../reports/eagle_s.md)) |
 
 ## Identities in Global Fishing Watch
 
@@ -34,13 +34,15 @@ Mediterranean, West Africa and India (GFW map, full period).
 
 `MULTI_IDENTITY` (2), `FLAG_CHANGE` (Marshall Islands, Paris MoU white list → Cook Islands, grey list),
 `REGISTRY_LOST` (registry confirmation ended with the flag change), `AIS_GAP` (window empty).
+`SANCTIONED` is listed with 0 points: the UK designated the ship in July 2025, after the incident.
 Before the incident the gap since 11 Dec still counts (+15); without it the ship would score 35 (MEDIUM).
 
 ## Open questions
 
 1. Why does GFW have no Eagle S positions from mid-December 2024 to March 2025? Check whether a logged-in
    account or the GFW API with a token returns more data.
-2. Exact crossing points of Estlink 2 and the telecom cables, to test `NEAR_CABLE_SLOW` with a cable layer.
+2. Track data around 25 Dec: Estlink 2 and the Finland–Estonia telecom cables are in the bundled cable
+   layer, but GFW has no positions to test `CABLE_CROSSING_SLOW` against.
 3. Ownership changes in July 2023 (registry data beyond GFW, e.g. Equasis).
 
 ## Sources

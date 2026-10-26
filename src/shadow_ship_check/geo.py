@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+from pathlib import Path
 from typing import Iterable, List, Tuple
 
 EARTH_RADIUS_NM = 3440.065
@@ -33,40 +34,83 @@ def point_segment_nm(lat: float, lon: float, a: Tuple[float, float], b: Tuple[fl
     return math.hypot(px, py) * 60.0  # 1 degree latitude ~ 60 nm
 
 
-class CableLayer:
-    """Cable routes loaded from GeoJSON (LineString / MultiLineString features).
+BUNDLED_CABLES = Path(__file__).resolve().parents[2] / "data" / "cables"
 
-    No cable geometry ships with this project: public cable maps are usually
-    not openly licensed. Bring your own file (e.g. digitised from official
-    notices) and pass it with ``--cables``.
+
+class CableLayer:
+    """Cable and pipeline routes loaded from GeoJSON (LineString / MultiLineString features).
+
+    The project bundles submarine cables and gas/oil pipelines for the Baltic Sea and
+    Taiwan from OpenStreetMap (``data/cables``, ODbL). OSM coverage is incomplete:
+    a missing route means "not mapped", not "no cable".
     """
 
     def __init__(self, lines: List[Tuple[str, List[Tuple[float, float]]]]):
         self.lines = lines
+        self._boxes = [
+            (min(c[1] for c in cs), max(c[1] for c in cs), min(c[0] for c in cs), max(c[0] for c in cs))
+            for _, cs in lines
+        ]
 
     @classmethod
-    def from_geojson(cls, path: str) -> "CableLayer":
-        with open(path, encoding="utf-8") as fh:
-            gj = json.load(fh)
+    def from_geojson(cls, *paths) -> "CableLayer":
+        """Load one or more GeoJSON files, or every ``*.geojson`` in a directory."""
+        files: List[Path] = []
+        for p in map(Path, paths):
+            files += sorted(p.glob("*.geojson")) if p.is_dir() else [p]
         lines = []
-        for feat in gj.get("features", []):
-            name = (feat.get("properties") or {}).get("name", "cable")
-            geom = feat.get("geometry") or {}
-            if geom.get("type") == "LineString":
-                lines.append((name, [tuple(c[:2]) for c in geom["coordinates"]]))
-            elif geom.get("type") == "MultiLineString":
-                for part in geom["coordinates"]:
-                    lines.append((name, [tuple(c[:2]) for c in part]))
+        for f in files:
+            gj = json.loads(f.read_text(encoding="utf-8"))
+            for feat in gj.get("features", []):
+                props = feat.get("properties") or {}
+                name = props.get("name") or (
+                    f"unnamed {props.get('kind', 'cable')} (OSM way {props['osm_way']})"
+                    if props.get("osm_way")
+                    else "cable"
+                )
+                geom = feat.get("geometry") or {}
+                parts = [geom["coordinates"]] if geom.get("type") == "LineString" else geom.get("coordinates", [])
+                if geom.get("type") in ("LineString", "MultiLineString"):
+                    lines += [(name, [tuple(c[:2]) for c in part]) for part in parts if len(part) > 1]
         return cls(lines)
 
-    def nearest(self, lat: float, lon: float) -> Tuple[str, float]:
+    @classmethod
+    def bundled(cls) -> "CableLayer":
+        return cls.from_geojson(BUNDLED_CABLES)
+
+    def nearest(self, lat: float, lon: float, within_nm: float = 30.0) -> Tuple[str, float]:
+        """Nearest route and its distance; routes further than ``within_nm`` are skipped."""
+        dlat = within_nm / 60.0
+        dlon = dlat / max(0.05, math.cos(math.radians(lat)))
         best = ("", float("inf"))
-        for name, coords in self.lines:
+        for (name, coords), (la0, la1, lo0, lo1) in zip(self.lines, self._boxes):
+            if lat < la0 - dlat or lat > la1 + dlat or lon < lo0 - dlon or lon > lo1 + dlon:
+                continue
             for a, b in zip(coords, coords[1:]):
                 d = point_segment_nm(lat, lon, a, b)
                 if d < best[1]:
                     best = (name, d)
         return best
+
+    def crossed(self, p: Tuple[float, float], q: Tuple[float, float]) -> List[str]:
+        """Names of the routes crossed by the straight line p-q (each (lon, lat))."""
+        lo0, lo1, la0, la1 = min(p[0], q[0]), max(p[0], q[0]), min(p[1], q[1]), max(p[1], q[1])
+        out = []
+        for (name, coords), (b0, b1, c0, c1) in zip(self.lines, self._boxes):
+            if la1 < b0 or la0 > b1 or lo1 < c0 or lo0 > c1 or name in out:
+                continue
+            if any(segments_cross(p, q, a, b) for a, b in zip(coords, coords[1:])):
+                out.append(name)
+        return out
+
+
+def _orient(a, b, c) -> float:
+    return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+
+
+def segments_cross(p, q, a, b) -> bool:
+    """True if segment p-q properly crosses segment a-b (points as (lon, lat))."""
+    return _orient(p, q, a) * _orient(p, q, b) < 0 and _orient(a, b, p) * _orient(a, b, q) < 0
 
 
 def path_length_nm(points: Iterable) -> float:

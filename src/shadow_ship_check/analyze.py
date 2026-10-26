@@ -9,9 +9,10 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from . import signals as S
+from . import watchlist as W
 from .geo import CableLayer
 from .gfw import _merge, identities_from_entries
-from .models import Identity, Report, TrackPoint
+from .models import Identity, Report, Signal, TrackPoint
 
 
 def merge_lookup_identities(identities: List[Identity], lookups: Optional[Dict[str, List[Identity]]]) -> List[Identity]:
@@ -54,6 +55,28 @@ def clip_identities(identities: List[Identity], as_of: datetime) -> List[Identit
     return out
 
 
+def identity_signals(
+    identities: List[Identity],
+    mmsi_lookups: Optional[Dict[str, List[Identity]]],
+    ref: Optional[datetime],
+    sanctions_list: Optional[dict] = None,
+) -> Tuple[List[Identity], List[Signal]]:
+    """The checks that need no track: identity history, registries, MMSI use, watchlist.
+
+    Returns the identities (merged with IMO-less copies found by MMSI) and the signals."""
+    sigs = S.imo_hidden(identities, mmsi_lookups)
+    identities = merge_lookup_identities(identities, mmsi_lookups)
+    sigs += S.multiple_identities(identities, ref)
+    sigs += S.flag_changes(identities, ref)
+    sigs += W.sanctions(identities, ref, sanctions_list)
+    sigs += S.registry_confirmation(identities, ref)
+    sigs += S.mmsi_flag_mismatch(identities)
+    sigs += S.mmsi_reuse(identities, mmsi_lookups)
+    sigs += S.name_on_other_mmsi(identities, mmsi_lookups)
+    sigs += S.concurrent_identities(identities, ref)
+    return identities, sigs
+
+
 def analyze(
     query: str,
     identities: List[Identity],
@@ -68,6 +91,7 @@ def analyze(
     primary_label: str = "",
     extra_tracks: Optional[Dict[str, List[TrackPoint]]] = None,
     as_of: Optional[datetime] = None,
+    sanctions_list: Optional[dict] = None,
 ) -> Report:
     """Run every check.
 
@@ -88,16 +112,7 @@ def analyze(
         window = (start, as_of)
         incident_time = None
     ref = window[1] if window else as_of
-    sigs = []
-    sigs += S.imo_hidden(identities, mmsi_lookups)
-    identities = merge_lookup_identities(identities, mmsi_lookups)
-    sigs += S.multiple_identities(identities, ref)
-    sigs += S.flag_changes(identities, ref)
-    sigs += S.registry_confirmation(identities, ref)
-    sigs += S.mmsi_flag_mismatch(identities)
-    sigs += S.mmsi_reuse(identities, mmsi_lookups)
-    sigs += S.name_on_other_mmsi(identities, mmsi_lookups)
-    sigs += S.concurrent_identities(identities, ref)
+    identities, sigs = identity_signals(identities, mmsi_lookups, ref, sanctions_list)
     if parallel and len(parallel) > 1:
         sigs += S.identity_handover(parallel, fetched)
         sigs += S.parallel_tracks(parallel)
@@ -117,7 +132,7 @@ def analyze(
         found += S.slow_movement(in_window)
         found += S.speed_drop(in_window, reference=pts)
         found += S.zigzag(in_window)
-        found += S.near_cables(in_window, cables)
+        found += S.cable_crossings(in_window, cables, reference=pts)
         groups.append((label if multi else "", found))
     sigs += _merge_signals(groups)
 
@@ -126,7 +141,7 @@ def analyze(
     total = sum(len(v) for v in movement.values())
     notes = [f"{n_window} track points inside the analysis window ({total} loaded, {len(movement)} identity track(s))."]
     if not cables:
-        notes.append("No cable layer given (--cables): proximity to cable routes was not checked.")
+        notes.append("No cable layer: cable crossings were not checked.")
     excerpt = []
     if incident_time:
         pad = timedelta(hours=excerpt_hours)
@@ -158,7 +173,11 @@ def _day(s: str) -> datetime:
 
 
 def analyze_fixture(
-    case: dict, fixture: dict, cables: Optional[CableLayer] = None, before_incident: bool = False
+    case: dict,
+    fixture: dict,
+    cables: Optional[CableLayer] = None,
+    before_incident: bool = False,
+    sanctions_list: Optional[dict] = None,
 ) -> Report:
     """Re-run a reference case. ``before_incident`` limits the data to what GFW
     had recorded up to the case's ``as_of`` time (start of the incident)."""
@@ -186,4 +205,5 @@ def analyze_fixture(
         cables=cables,
         incident_time=case.get("incident_time"),
         as_of=(case.get("as_of") or case["window"][1]) if before_incident else None,
+        sanctions_list=sanctions_list,
     )

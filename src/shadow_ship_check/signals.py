@@ -205,25 +205,35 @@ def mmsi_reuse(
 
 def name_on_other_mmsi(identities: Sequence[Identity], lookups: Optional[Dict[str, List[Identity]]]) -> List[Signal]:
     """The hull's name broadcast under MMSIs that are not part of its known
-    identities - often MMSIs that belong to other ships."""
+    identities - often MMSIs that belong to other ships.
+
+    Only counts an identity that (a) carries no IMO number or the hull's own, (b) was
+    active while the hull itself used that name and (c) broadcast the same flag - a ship
+    that merely shares a common name ("VLADIMIR") has its own IMO, period or flag."""
     if not lookups:
         return []
-    own_names = {i.key[0] for i in identities if i.key[0]}
     own_mmsis = {i.mmsi for i in identities if i.mmsi}
+    own_imos = {i.imo for i in identities if i.imo}
+    usage: Dict[str, Tuple[datetime, datetime, set]] = {}
+    for i in identities:
+        if i.key[0] and i.start and i.end:
+            a, b, flags = usage.get(i.key[0], (i.start, i.end, set()))
+            usage[i.key[0]] = (min(a, i.start), max(b, i.end), flags | {i.flag})
     seen, ev = set(), []
     for found in lookups.values():
         for o in found:
-            if o.key[0] in own_names and o.mmsi and o.mmsi not in own_mmsis and o.key not in seen:
-                seen.add(o.key)
-                owners = sorted(
-                    {
-                        x.name
-                        for f in lookups.values()
-                        for x in f
-                        if x.mmsi == o.mmsi and x.name and x.key[0] not in own_names
-                    }
-                )
-                ev.append(f"{o.label()}" + (f" - MMSI also used by {', '.join(owners)}" if owners else ""))
+            if not (o.key[0] in usage and o.mmsi and o.mmsi not in own_mmsis and o.key not in seen):
+                continue
+            a, b, flags = usage[o.key[0]]
+            if (o.imo and o.imo not in own_imos) or o.flag not in flags:
+                continue
+            if not (o.start and o.end and o.start <= b and o.end >= a):
+                continue
+            seen.add(o.key)
+            owners = sorted(
+                {x.name for f in lookups.values() for x in f if x.mmsi == o.mmsi and x.name and x.key[0] not in usage}
+            )
+            ev.append(f"{o.label()}" + (f" - MMSI also used by {', '.join(owners)}" if owners else ""))
     if not ev:
         return []
     return [
@@ -578,22 +588,54 @@ def zigzag(
     return [Signal("ZIGZAG", "Zig-zag / looping movement", 10, ev, SPARSE_TRACK_CAVEAT)]
 
 
-def near_cables(
-    points: Sequence[TrackPoint], cables: Optional[CableLayer], radius_nm: float = 2.0, max_kn: float = 5.0
+def cable_crossings(
+    points: Sequence[TrackPoint],
+    cables: Optional[CableLayer],
+    reference: Optional[Sequence[TrackPoint]] = None,
+    factor: float = 0.7,
+    fallback_kn: float = 5.0,
+    max_gap_h: float = 3.0,
+    cruise_min_kn: float = 5.0,
 ) -> List[Signal]:
+    """The track crosses a mapped cable or pipeline while the ship moves clearly slower
+    than its own cruising speed - the pattern of an anchor dragged across a cable.
+
+    Speed is measured over ground between the two positions (AIS speed jitters).
+    Crossings while lying still (both AIS speeds and the rate < 1 kn) are ignored:
+    at a berth a cable can run under a ship that does not move."""
     if not cables:
         return []
+    pts = sorted(points, key=lambda p: p.t)
+    cruise = [p.speed for p in (reference or pts) if p.speed >= cruise_min_kn]
+    ref = median(cruise) if len(cruise) >= 5 else None
+    limit = ref * factor if ref else fallback_kn
     ev = []
-    for p in sorted(points, key=lambda p: p.t):
-        if p.speed > max_kn:
+    for p, q in zip(pts, pts[1:]):
+        hours = (q.t - p.t).total_seconds() / 3600
+        if not 0 < hours <= max_gap_h:
             continue
-        name, d = cables.nearest(p.lat, p.lon)
-        if d <= radius_nm:
-            ev.append(f"{_fmt(p.t)}: {p.speed:.1f} kn, {d:.2f} nm from {name}")
+        rate = haversine_nm(p.lat, p.lon, q.lat, q.lon) / hours
+        if rate > limit or (rate < 1.0 and max(p.speed, q.speed) < 1.0):
+            continue
+        names = cables.crossed((p.lon, p.lat), (q.lon, q.lat))
+        if names:
+            base = f", cruising median {ref:.1f} kn" if ref else ""
+            ev.append(
+                f"{_fmt(p.t)} -> {q.t:%H:%M}: crosses {', '.join(names)} at {rate:.1f} kn over ground{base}, "
+                f"around {(p.lat + q.lat) / 2:.3f},{(p.lon + q.lon) / 2:.3f}"
+            )
     if not ev:
         return []
-    shown = ev[:10] + ([f"... {len(ev) - 10} more"] if len(ev) > 10 else [])
-    return [Signal("NEAR_CABLE_SLOW", f"Slow (<= {max_kn:g} kn) within {radius_nm:g} nm of a cable route", 20, shown)]
+    return [
+        Signal(
+            "CABLE_CROSSING_SLOW",
+            "Crossed a mapped cable or pipeline at reduced speed",
+            20,
+            ev,
+            "Cable routes from OpenStreetMap: approximate and incomplete. Ships cross cables all the time; "
+            "only slow crossings are listed.",
+        )
+    ]
 
 
 ALL_CODES = [
@@ -601,6 +643,7 @@ ALL_CODES = [
     "FLAG_CHANGE",
     "REGISTRY_LOST",
     "NO_REGISTRY",
+    "SANCTIONED",
     "MMSI_FLAG_MISMATCH",
     "MMSI_REUSE",
     "NAME_ON_OTHER_MMSI",
@@ -612,5 +655,5 @@ ALL_CODES = [
     "SLOW_LOITERING",
     "SPEED_DROP",
     "ZIGZAG",
-    "NEAR_CABLE_SLOW",
+    "CABLE_CROSSING_SLOW",
 ]

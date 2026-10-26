@@ -1,21 +1,45 @@
 # Xingshun 39 (Shunxing 39) - TPE cable north of Keelung
 
-**Score: 100/100 (HIGH)**  
-Analysis window: 2025-01-02 00:00 - 2025-01-05 00:00 UTC  
+Case file with context and sources: [xingshun_39.md](../cases/xingshun_39.md)
+
+| | Score | Identity | Flag & registry | Behaviour |
+|---|---|---|---|---|
+| Before the incident | **100 HIGH** | 80 | 25 | 15 |
+| Full data | **100 HIGH** | 80 | 25 | 65 |
+
+Pre-incident data cut-off: 2025-01-02 12:00 UTC.  
+Analysis window: 2025-01-02 00:00 - 2025-01-05 00:00 UTC.  
 _Indicators only - not evidence of sabotage or any other wrongdoing. Data: Global Fishing Watch (CC BY-NC 4.0)._
 
-## Identities
+## Before the incident
 
-| Name | Flag | MMSI | IMO | From | To | Source |
+What the checks flag using only data recorded before the cut-off:
+
+- **4 identities linked to the same hull (4 in the 5 years before 2025-01-02)** (+30): * BAOLONG36 / GUY / MMSI 750342000 (2022-11-17 - 2023-05-12, self-reported AIS only)
+- **Two identities of the same hull in use at the same time** (+20): 2022-11-24 - 2023-05-12: BAOLONG36/GUY/750342000 and BAOLONG36/CMR/613003836
+- **Identity swap at sea (one AIS identity stops, another starts nearby)** (+20): XINGSHUN39/TZA/677087200 stops 2024-12-28 22:11 UTC at 25.163,121.753 -> SHUNXING39/CMR/613003889 (no IMO) starts 2024-12-29 02:44 UTC at 25.588,121.803 (273 min, 25.7 nm)
+- **1 flag change(s)** (+15): 2024-03-04: CMR -> TZA (Paris MoU black, ITF flag of convenience)  [BAOLONG36 -> XINGSHUN39]  (recent)
+- **AIS gaps** (+15): [XINGSHUN39/TZA/677087200] no track points at all inside the analysis window
+- **No identity of this hull is confirmed by a registry in GFW** (+10): in use at 2025-01-02: XINGSHUN39 / TZA / MMSI 677087200 (2024-03-04 - 2025-01-02, self-reported AIS only)
+- **Identity also used without its IMO number** (+10): BAOLONG36 / CMR / MMSI 613003836 (2022-11-24 - 2023-02-10, self-reported AIS only) - same name and MMSI, but no IMO number broadcast
+
+## Full data
+
+### Identities
+
+| Name | Flag | MMSI | IMO | First seen | Last seen | Source |
 |---|---|---|---|---|---|---|
 | BAOLONG36 | GUY | 750342000 | 8358427 | 2022-11-17 | 2023-05-12 | self-reported AIS only |
 | BAOLONG36 | CMR | 613003836 | 8358427 | 2022-11-24 | 2023-09-11 | self-reported AIS only |
 | XINGSHUN39 | TZA | 677087200 | 8358427 | 2024-03-04 | 2025-08-14 | self-reported AIS only |
 | SHUNXING39 | CMR | 613003889 | - | 2024-09-28 | 2025-01-03 | self-reported AIS only |
 
-## Red flags
+### Signals
 
-### 4 identities linked to the same hull (4 in the 5 years before 2025-01-05)  `MULTI_IDENTITY` (+30)
+#### Identity (+80)
+
+**4 identities linked to the same hull (4 in the 5 years before 2025-01-05)** `MULTI_IDENTITY` +30
+
 - * BAOLONG36 / GUY / MMSI 750342000 (2022-11-17 - 2023-05-12, self-reported AIS only)
 - * BAOLONG36 / CMR / MMSI 613003836 (2022-11-24 - 2023-09-11, self-reported AIS only)
 - * XINGSHUN39 / TZA / MMSI 677087200 (2024-03-04 - 2025-08-14, self-reported AIS only)
@@ -23,17 +47,8 @@ _Indicators only - not evidence of sabotage or any other wrongdoing. Data: Globa
 
 > * = in use during the look-back period (scored); others are history.
 
-### 1 flag change(s)  `FLAG_CHANGE` (+15)
-- 2024-03-04: CMR -> TZA (Paris MoU black, ITF flag of convenience)  [BAOLONG36 -> XINGSHUN39]  (recent)
+**Identity also used without its IMO number** `IMO_HIDDEN` +10
 
-> Scored: changes in the 3 years before 2025-01-05 by the new flag's Paris MoU rating (black +15, grey +10, white +5; unlisted +10 if an ITF flag of convenience, else +5) and changes after it (+5). Sales also cause flag changes; most of the world fleet sails under white-listed open registries.
-
-### No identity of this hull is confirmed by a registry in GFW  `NO_REGISTRY` (+10)
-- in use at 2025-01-05: XINGSHUN39 / TZA / MMSI 677087200 (2024-03-04 - 2025-08-14, self-reported AIS only)
-
-> Logged-in GFW users see 11 additional registry sources.
-
-### Identity also used without its IMO number  `IMO_HIDDEN` (+10)
 - BAOLONG36 / CMR / MMSI 613003836 (2022-11-24 - 2023-02-10, self-reported AIS only) - same name and MMSI, but no IMO number broadcast
 - XINGSHUN39 / TZA / MMSI 677087200 (2024-06-16 - 2024-09-29, self-reported AIS only) - same name and MMSI, but no IMO number broadcast
 - XINGSHUNNO.39 / TZA / MMSI 677087200 (2025-08-14 - 2025-08-14, self-reported AIS only) - same name and MMSI, but no IMO number broadcast
@@ -41,17 +56,36 @@ _Indicators only - not evidence of sabotage or any other wrongdoing. Data: Globa
 
 > Without an IMO the AIS identity is not tied to the hull's history.
 
-### Two identities of the same hull in use at the same time  `CONCURRENT_IDENTITIES` (+20)
+**Two identities of the same hull in use at the same time** `CONCURRENT_IDENTITIES` +20
+
 - 2022-11-24 - 2023-05-12: BAOLONG36/GUY/750342000 and BAOLONG36/CMR/613003836
 - 2024-09-28 - 2025-01-03: XINGSHUN39/TZA/677087200 and SHUNXING39/CMR/613003889
 
 > Overlap is computed from first/last AIS message per identity; check the tracks (handover / parallel signals).
 
-### Identity swap at sea (one AIS identity stops, another starts nearby)  `IDENTITY_HANDOVER` (+20)
+**Identity swap at sea (one AIS identity stops, another starts nearby)** `IDENTITY_HANDOVER` +20
+
 - SHUNXING39/CMR/613003889 (no IMO) stops 2025-01-03 08:19 UTC at 25.334,121.712 -> XINGSHUN39/TZA/677087200 starts 2025-01-03 08:52 UTC at 25.335,121.707 (33 min, 0.2 nm)
 - XINGSHUN39/TZA/677087200 stops 2024-12-28 22:11 UTC at 25.163,121.753 -> SHUNXING39/CMR/613003889 (no IMO) starts 2024-12-29 02:44 UTC at 25.588,121.803 (273 min, 25.7 nm)
 
-### AIS gaps  `AIS_GAP` (+15)
+#### Flag & registry (+25)
+
+**1 flag change(s)** `FLAG_CHANGE` +15
+
+- 2024-03-04: CMR -> TZA (Paris MoU black, ITF flag of convenience)  [BAOLONG36 -> XINGSHUN39]  (recent)
+
+> Scored: changes in the 3 years before 2025-01-05 by the new flag's Paris MoU rating (black +15, grey +10, white +5; unlisted +10 if an ITF flag of convenience, else +5) and changes after it (+5). Sales also cause flag changes; most of the world fleet sails under white-listed open registries.
+
+**No identity of this hull is confirmed by a registry in GFW** `NO_REGISTRY` +10
+
+- in use at 2025-01-05: XINGSHUN39 / TZA / MMSI 677087200 (2024-03-04 - 2025-08-14, self-reported AIS only)
+
+> Logged-in GFW users see 11 additional registry sources.
+
+#### Behaviour (+65)
+
+**AIS gaps** `AIS_GAP` +15
+
 - [XINGSHUN39/TZA/677087200] 2024-12-28 22:11 UTC -> 2025-01-03 08:52 UTC: 130.7 h without position, 11 nm straight-line jump (implied 0.1 kn), 25.163,121.753 -> 25.335,121.707  - meanwhile broadcasting as SHUNXING39/CMR/613003889 (no IMO) (253 positions); scored under IDENTITY_HANDOVER
 - [SHUNXING39/CMR/613003889 (no IMO)] 2024-12-29 05:55 UTC -> 2024-12-29 19:49 UTC: 13.9 h without position, 11 nm straight-line jump (implied 0.8 kn), 25.922,121.823 -> 26.104,121.783
 - [SHUNXING39/CMR/613003889 (no IMO)] 2024-12-29 20:07 UTC -> 2024-12-31 14:07 UTC: 42.0 h without position, 10 nm straight-line jump (implied 0.2 kn), 26.104,121.783 -> 25.972,121.894
@@ -59,7 +93,8 @@ _Indicators only - not evidence of sabotage or any other wrongdoing. Data: Globa
 
 > Public GFW tracks are simplified (often one point every 60-90 min on open water). Short gaps and brief manoeuvres can be invisible or exaggerated.
 
-### Low speed (<= 3 kn) for 2 h or more  `SLOW_LOITERING` (+20)
+**Low speed (<= 3 kn) for 2 h or more** `SLOW_LOITERING` +20
+
 - [XINGSHUN39/TZA/677087200] 2025-01-03 17:49 UTC -> 2025-01-03 21:01 UTC: 3.2 h slow moving, mean AIS speed 1.7 kn, path 5.7 nm, net 1.1 nm, at 25.374,121.750
 - [SHUNXING39/CMR/613003889 (no IMO)] 2025-01-02 06:13 UTC -> 2025-01-02 13:51 UTC: 7.6 h stationary (anchored or drifting), mean AIS speed 0.5 kn, path 2.3 nm, net 1.9 nm, at 25.663,122.057
 - [SHUNXING39/CMR/613003889 (no IMO)] 2025-01-02 15:17 UTC -> 2025-01-02 17:47 UTC: 2.5 h slow moving, mean AIS speed 1.3 kn, path 2.2 nm, net 2.1 nm, at 25.580,121.938
@@ -67,13 +102,25 @@ _Indicators only - not evidence of sabotage or any other wrongdoing. Data: Globa
 
 > Only 'slow moving' scores. Stationary periods are normal in ports and anchorages; without a cable layer the tool cannot tell a port from an anchorage over a cable.
 
-### Zig-zag / looping movement  `ZIGZAG` (+10)
+**Zig-zag / looping movement** `ZIGZAG` +10
+
 - [XINGSHUN39/TZA/677087200] 2025-01-03 08:52 UTC -> 2025-01-03 14:32 UTC: 15.2 nm sailed, only 3.1 nm net, at 25.335,121.707
 - [XINGSHUN39/TZA/677087200] 2025-01-03 16:02 UTC -> 2025-01-03 21:57 UTC: 10.7 nm sailed, only 1.1 nm net, at 25.350,121.747
 
 > Public GFW tracks are simplified (often one point every 60-90 min on open water). Short gaps and brief manoeuvres can be invisible or exaggerated.
 
-## Track around the reported incident time
+**Crossed a mapped cable or pipeline at reduced speed** `CABLE_CROSSING_SLOW` +20
+
+- [XINGSHUN39/TZA/677087200] 2025-01-03 17:49 UTC -> 18:45: crosses unnamed telecom (OSM way 1334156416) at 3.3 kn over ground, around 25.397,121.763
+- [XINGSHUN39/TZA/677087200] 2025-01-03 20:26 UTC -> 20:49: crosses unnamed telecom (OSM way 1334156416) at 0.9 kn over ground, around 25.381,121.773
+- [XINGSHUN39/TZA/677087200] 2025-01-03 23:13 UTC -> 00:06: crosses unnamed telecom (OSM way 1334156416) at 2.1 kn over ground, around 25.372,121.758
+- [XINGSHUN39/TZA/677087200] 2025-01-04 00:06 UTC -> 01:37: crosses unnamed telecom (OSM way 1334156416) at 3.1 kn over ground, around 25.385,121.722
+- [SHUNXING39/CMR/613003889 (no IMO)] 2025-01-02 23:42 UTC -> 00:04: crosses unnamed telecom (OSM way 1334156416) at 1.9 kn over ground, cruising median 5.8 kn, around 25.382,121.780
+- [SHUNXING39/CMR/613003889 (no IMO)] 2025-01-03 01:09 UTC -> 01:12: crosses unnamed telecom (OSM way 1334156416) at 0.5 kn over ground, cruising median 5.8 kn, around 25.381,121.771
+
+> Cable routes from OpenStreetMap: approximate and incomplete. Ships cross cables all the time; only slow crossings are listed.
+
+### Track around the reported incident time
 
 Reported time (approximate): 2025-01-02 23:40 UTC. Points within +/- 3 h:
 
@@ -122,7 +169,6 @@ Reported time (approximate): 2025-01-02 23:40 UTC. Points within +/- 3 h:
 | 2025-01-03 01:12 | SHUNXING39/CMR/613003889 (no IMO) | 25.3812 | 121.7704 | 0.3 |
 | 2025-01-03 01:14 | SHUNXING39/CMR/613003889 (no IMO) | 25.3811 | 121.7700 | 1.0 |
 
-## Notes
+### Notes
 
 - 276 track points inside the analysis window (326 loaded, 2 identity track(s)).
-- No cable layer given (--cables): proximity to cable routes was not checked.

@@ -83,6 +83,15 @@ class TrackPoint:
         )
 
 
+CATEGORIES = {
+    "identity": ("Identity", ["MULTI_IDENTITY", "MMSI_FLAG_MISMATCH", "MMSI_REUSE", "NAME_ON_OTHER_MMSI", "IMO_HIDDEN",
+                              "CONCURRENT_IDENTITIES", "IDENTITY_HANDOVER", "PARALLEL_TRACKS"]),
+    "registry": ("Flag & registry", ["FLAG_CHANGE", "REGISTRY_LOST", "NO_REGISTRY", "SANCTIONED"]),
+    "behaviour": ("Behaviour", ["AIS_GAP", "SLOW_LOITERING", "SPEED_DROP", "ZIGZAG", "CABLE_CROSSING_SLOW"]),
+}  # fmt: skip
+CATEGORY_OF = {code: cat for cat, (_, codes) in CATEGORIES.items() for code in codes}
+
+
 @dataclass
 class Signal:
     """A red flag found by one of the checks."""
@@ -108,6 +117,14 @@ class Report:
     @property
     def score(self) -> int:
         return min(100, sum(s.points for s in self.signals))
+
+    @property
+    def subscores(self) -> dict:
+        """Points per category (identity / flag & registry / behaviour), uncapped."""
+        out = {cat: 0 for cat in CATEGORIES}
+        for s in self.signals:
+            out[CATEGORY_OF.get(s.code, "behaviour")] += s.points
+        return out
 
     @property
     def level(self) -> str:

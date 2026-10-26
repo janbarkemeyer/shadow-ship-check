@@ -1,9 +1,10 @@
-"""Command line interface: ``ssc search | check | case``."""
+"""Command line interface: ``ssc search | check | case | eval``."""
 
 from __future__ import annotations
 
 import argparse
 import http.client
+import json
 import sys
 import urllib.error
 from dataclasses import replace
@@ -11,18 +12,29 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List
 
+from . import __version__, watchlist
 from .analyze import analyze, analyze_fixture, load_fixture
-from .cases import ALL
+from .cases import ALL, CASES
 from .geo import CableLayer
 from .gfw import GFWClient, identities_from_entries
 from .models import Identity, normalize_name
-from .report import to_json, to_markdown, to_text
+from .report import to_json, to_markdown, to_markdown_case, to_text
 
 DEFAULT_FIXTURES = Path(__file__).resolve().parents[2] / "data" / "fixtures"
 
 
 def _date(s: str) -> datetime:
     return datetime.fromisoformat(s).replace(tzinfo=timezone.utc)
+
+
+def _cables(args):
+    if args.no_cables:
+        return None
+    return CableLayer.from_geojson(*args.cables) if args.cables else CableLayer.bundled()
+
+
+def _sanctions(args):
+    return None if args.no_sanctions else watchlist.load()
 
 
 def _emit(report, args, title=None) -> None:
@@ -107,7 +119,7 @@ def cmd_check(args) -> int:
     extra = {k: v for k, v in tracks.items() if k != primary and in_win[k]}
     fetched = {k: (start - pad, end + pad) for k in tracks}
 
-    cables = CableLayer.from_geojson(args.cables) if args.cables else None
+    cables = _cables(args)
     report = analyze(
         args.query,
         _dedupe(raw + linked),
@@ -121,6 +133,7 @@ def cmd_check(args) -> int:
         primary_label=primary if extra else "",
         extra_tracks=extra,
         as_of=_date(args.as_of) if args.as_of else None,
+        sanctions_list=_sanctions(args),
     )
     _emit(report, args)
     return 0
@@ -137,7 +150,8 @@ def _dedupe(identities: List[Identity]) -> List[Identity]:
 
 def cmd_case(args) -> int:
     names = list(ALL) if args.name == "all" else [args.name]
-    cables = CableLayer.from_geojson(args.cables) if args.cables else None
+    cables = _cables(args)
+    listing = _sanctions(args)
     if len(names) > 1:
         print(f"{'case':20} {'full':>11}   {'before':>11}   scored signals before the incident")
     for n in names:
@@ -147,26 +161,48 @@ def cmd_case(args) -> int:
         case = ALL[n]
         fixture = load_fixture(Path(args.fixtures) / f"{n}.json")
         if len(names) == 1:
-            report = analyze_fixture(case, fixture, cables, before_incident=args.before_incident)
+            report = analyze_fixture(case, fixture, cables, args.before_incident, listing)
             _emit(report, args, case["title"] + (" (before the incident)" if args.before_incident else ""))
             continue
-        full = analyze_fixture(case, fixture, cables)
-        before = analyze_fixture(case, fixture, cables, before_incident=True)
+        full = analyze_fixture(case, fixture, cables, False, listing)
+        before = analyze_fixture(case, fixture, cables, True, listing)
         if args.md:
             Path(args.md).mkdir(parents=True, exist_ok=True)
-            Path(args.md, f"{n}.md").write_text(to_markdown(full, case["title"]), encoding="utf-8")
-            Path(args.md, f"{n}_before.md").write_text(
-                to_markdown(before, case["title"] + " (before the incident)"), encoding="utf-8"
-            )
+            case_file = f"../cases/{n}.md" if n in CASES else None
+            text = to_markdown_case(full, before, case["title"], case_file)
+            Path(args.md, f"{n}.md").write_text(text, encoding="utf-8")
         scored = ", ".join(f"{s.code}+{s.points}" for s in before.signals if s.points)
         print(f"{n:20} {full.score:>4} {full.level:6}   {before.score:>4} {before.level:6}   {scored}")
     return 0
+
+
+def cmd_eval(args) -> int:
+    from . import evaluate
+
+    data = evaluate.load(Path(args.data)) if args.data else evaluate.load()
+    result = evaluate.evaluate(data)
+    if args.json:
+        Path(args.json).write_text(json.dumps(result, indent=2), encoding="utf-8")
+    print(evaluate.to_text(result, data.get("meta", {})))
+    return 0
+
+
+def _cable_args(p) -> None:
+    p.add_argument(
+        "--cables",
+        action="append",
+        metavar="GEOJSON",
+        help="cable routes to use instead of the bundled OpenStreetMap layer (file or directory, repeatable)",
+    )
+    p.add_argument("--no-cables", action="store_true", help="skip the cable-crossing check")
+    p.add_argument("--no-sanctions", action="store_true", help="skip the UK sanctions list check")
 
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(
         prog="ssc", description="Check ships for camouflage patterns seen before subsea cable incidents."
     )
+    p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     s = sub.add_parser("search", help="list identities matching a name / IMO / MMSI")
@@ -180,7 +216,7 @@ def main(argv=None) -> int:
     c.add_argument("--context-days", type=int, default=3, help="extra days of track loaded around the window")
     c.add_argument("--at", help="incident time (UTC, e.g. 2025-02-24T19:00) - prints the track +/- 3 h")
     c.add_argument("--as-of", help="ignore everything GFW recorded after this time (UTC) - a pre-incident view")
-    c.add_argument("--cables", help="GeoJSON with cable routes (LineString features)")
+    _cable_args(c)
     c.add_argument("--no-mmsi-lookup", action="store_true", help="skip the extra search for MMSI reuse")
     c.add_argument(
         "--also",
@@ -195,7 +231,7 @@ def main(argv=None) -> int:
     k = sub.add_parser("case", help="re-run a reference case from the bundled fixtures (offline)")
     k.add_argument("name", help=f"one of: {', '.join(ALL)}, or 'all'")
     k.add_argument("--fixtures", default=str(DEFAULT_FIXTURES))
-    k.add_argument("--cables")
+    _cable_args(k)
     k.add_argument("--md", help="Markdown output file (a directory when name is 'all')")
     k.add_argument("--json")
     k.add_argument(
@@ -204,6 +240,11 @@ def main(argv=None) -> int:
         help="use only data GFW had recorded before the incident (the case's 'as_of' time)",
     )
     k.set_defaults(func=cmd_case)
+
+    e = sub.add_parser("eval", help="score sanctioned shadow-fleet vessels vs. random ships (offline)")
+    e.add_argument("--data", help="evaluation file (default: the bundled data/eval set)")
+    e.add_argument("--json", help="write the metrics as JSON")
+    e.set_defaults(func=cmd_eval)
 
     args = p.parse_args(argv)
     try:

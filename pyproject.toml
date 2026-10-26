@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "shadow-ship-check"
-version = "0.1.0"
-description = "Check ships for camouflage patterns (identity changes, flag hopping, AIS gaps, loitering) seen before subsea cable incidents in Taiwan and the Baltic Sea."
+version = "0.2.0"
+description = "Check ships for the camouflage patterns (identity changes, flag hopping, borrowed MMSIs, slow cable crossings) seen before subsea cable incidents in Taiwan and the Baltic Sea."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -30,3 +30,6 @@ line-length = 120
 [tool.ruff.lint]
 select = ["E", "F", "W", "B", "I"]
 ignore = ["B905"]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/build_site.py" = ["E501"]  # HTML templates

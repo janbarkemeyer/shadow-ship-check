@@ -6,6 +6,7 @@ from shadow_ship_check.signals import (
     flag_changes,
     identity_handover,
     multiple_identities,
+    name_on_other_mmsi,
     registry_confirmation,
 )
 
@@ -95,3 +96,16 @@ def test_ordinary_sale_to_open_registry_stays_low():
            ident("OCEAN STAR", "LBR", "636000001", -400, 30, confirmed=True)]  # fmt: skip
     r = analyze("test", ids, [], window=(T0 - timedelta(days=3), T0))
     assert r.level == "LOW", [(s.code, s.points) for s in r.signals]
+
+
+def test_name_on_other_mmsi_ignores_namesakes():
+    from dataclasses import replace
+
+    hull = [ident("RAGNAR", "PLW", "511100983", 0, 400)]
+    borrowed = replace(ident("RAGNAR", "PLW", "511999999", 100, 105), imo=None)  # no IMO, same flag, in use
+    other_ship = replace(ident("RAGNAR", "PLW", "511888888", 100, 300), imo="9621522")  # its own IMO
+    other_flag = replace(ident("RAGNAR", "FRA", "227957250", 100, 300), imo=None)  # French boat
+    before = replace(ident("RAGNAR", "PLW", "511777777", -900, -800), imo=None)  # before the hull used the name
+    lookups = {i.mmsi: [i] for i in (borrowed, other_ship, other_flag, before)}
+    sigs = name_on_other_mmsi(hull, lookups)
+    assert len(sigs) == 1 and len(sigs[0].evidence) == 1 and "511999999" in sigs[0].evidence[0]
