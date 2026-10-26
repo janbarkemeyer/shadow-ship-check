@@ -15,7 +15,7 @@
 | JIN LONG 389 | China | 413762751 | 2012 to Oct 2022 | registry-confirmed |
 | DONGSHUN3 | China | 413762751 | Oct 2022 to Sep 2023 | registry record only |
 | HONGTAI58 | Togo | 671756000 | Jul 2023 to 15 Dec 2024 (with IMO) / Nov 2023 to 27 Feb 2025 (without IMO) | self-reported |
-| HONGTA 8 | Tanzania | 677082100 | 15 Dec 2024 to 5 Feb 2025 | self-reported, IMO only until 2 Jan |
+| HONGTA 8 | Tanzania | 677082100 | 15 Dec 2024 to 2 Jan 2025; 4 Jan to 5 Feb 2025 | first period with IMO, second without IMO |
 | HONGTAI58 | Togo | 671666000 | 27 Nov to 4 Dec 2024 | MMSI previously registered to another ship (KARAM, IMO 8116180) |
 | HONGTAI58 | Togo | 671280000 | 25 to 26 Dec 2023 | MMSI also used by XINJINLIN6 |
 
@@ -37,9 +37,10 @@ detained hull.
 * On 17 Dec 2024 the IMO-less HONGTAI58 identity reports a position north of
   Taiwan (25.98 N, 120.91 E) while HONGTA 8 is 666 nm away off Korea; again on 12 Jan 2025 (728 nm).
   Either two hulls share the HONGTAI58 identity data, or GFW merged two identities wrongly.
-* The IMO-less HONGTAI58 identity lay off Kaohsiung from mid-January,
-  moved north on 22 Feb and stayed near 23.30 N, 120.02 E from 22 Feb 10:40 UTC for
-  roughly 56 hours, with AIS speeds of 0–3 kn (anchor swing). Reuters reported that the ship had anchored
+* The IMO-less HONGTAI58 identity has positions off Kaohsiung from mid-January,
+  moves north on 22 Feb and reports low-speed positions near 23.30 N, 120.02 E between
+  22 Feb 10:40 and 24 Feb 18:57 UTC. This spans roughly 56 hours but does not give continuous coverage.
+  Reuters reported that the ship had anchored
   near the cable since the Saturday (22 Feb).
 * At 18:57 UTC on 24 Feb (02:57 local, 25 Feb) the ship starts
   moving; at 19:10–19:12 UTC it makes 4.5–5.2 kn, then there is no position for 78 minutes. From 20:30

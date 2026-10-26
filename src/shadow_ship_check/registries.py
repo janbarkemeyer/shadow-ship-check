@@ -169,7 +169,7 @@ def is_foc(flag: str | None) -> bool:
 
 
 def flag_from_mmsi(mmsi: str | None) -> str | None:
-    if not mmsi or len(mmsi) != 9:
+    if not mmsi or len(mmsi) != 9 or not mmsi.isascii() or not mmsi.isdigit():
         return None
     return MID_TO_FLAG.get(mmsi[:3])
 

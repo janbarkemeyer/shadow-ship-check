@@ -17,8 +17,12 @@ dev = ["pytest>=7", "ruff>=0.5"]
 [project.scripts]
 ssc = "shadow_ship_check.cli:main"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.setuptools]
+packages = ["shadow_ship_check", "shadow_ship_check._data"]
+package-dir = { shadow_ship_check = "src/shadow_ship_check", "shadow_ship_check._data" = "data" }
+
+[tool.setuptools.package-data]
+"shadow_ship_check._data" = ["README.md", "fixtures/*.json", "cables/*.geojson", "eval/*.gz", "sanctions/*.csv"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

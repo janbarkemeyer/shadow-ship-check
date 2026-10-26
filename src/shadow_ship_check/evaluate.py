@@ -1,4 +1,4 @@
-"""Out-of-sample check of the identity rules: sanctioned shadow-fleet vessels vs. random ships.
+"""Sample comparison of the identity rules: sanctioned vessels vs. sampled controls.
 
 Each record in the evaluation file holds the raw GFW identity search results for one hull
 (plus the MMSI and name look-ups that ``ssc check`` would make) and a reference date:
@@ -24,11 +24,12 @@ from pathlib import Path
 from statistics import median
 from typing import Dict, List, Sequence, Tuple
 
+from . import data_path
 from .analyze import clip_identities, identity_signals
 from .gfw import identities_from_entries
 from .models import CATEGORIES, CATEGORY_OF, normalize_name
 
-BUNDLED = Path(__file__).resolve().parents[2] / "data" / "eval" / "uk_sanctions_vs_random.json.gz"
+BUNDLED = data_path() / "eval" / "uk_sanctions_vs_random.json.gz"
 LEVELS = (("HIGH", 50), ("MEDIUM", 20))
 
 
@@ -45,7 +46,9 @@ def _ref(s: str) -> datetime:
 def score_record(rec: dict) -> Tuple[int, Dict[str, int]]:
     """Identity-only score of one hull at its reference date; returns (score, points per signal code)."""
     ref = _ref(rec["as_of"])
-    identities = clip_identities(identities_from_entries(rec["identities"]), ref)
+    identities = clip_identities(
+        [i for i in identities_from_entries(rec["identities"]) if not i.imo or i.imo == rec["imo"]], ref
+    )
     lookups = {
         m: [i for i in identities_from_entries(e, dedupe=False) if i.mmsi == m]
         for m, e in (rec.get("mmsi_lookups") or {}).items()
@@ -68,6 +71,8 @@ def auc(pos: Sequence[float], neg: Sequence[float]) -> float:
     """Probability that a random positive scores higher than a random negative (ties count half).
 
     Computed from ranks (Mann-Whitney U), so the bootstrap stays fast."""
+    if not pos or not neg:
+        raise ValueError("AUC requires observations in both groups")
     values = sorted([(v, 1) for v in pos] + [(v, 0) for v in neg])
     rank_sum, i = 0.0, 0
     while i < len(values):
@@ -84,6 +89,8 @@ def auc(pos: Sequence[float], neg: Sequence[float]) -> float:
 def bootstrap_auc(
     pos: Sequence[float], neg: Sequence[float], n: int = 1000, seed: int = 20261026
 ) -> Tuple[float, float]:
+    if n < 40:
+        raise ValueError("At least 40 bootstrap samples are required")
     rnd = random.Random(seed)
     vals = sorted(auc([rnd.choice(pos) for _ in pos], [rnd.choice(neg) for _ in neg]) for _ in range(n))
     return vals[int(0.025 * n)], vals[int(0.975 * n) - 1]
@@ -91,9 +98,15 @@ def bootstrap_auc(
 
 def evaluate(data: dict) -> dict:
     groups: Dict[str, List[Tuple[int, Dict[str, int]]]] = {"sanctioned": [], "control": []}
+    seen = set()
     for rec in data["records"]:
+        if rec["label"] not in groups:
+            raise ValueError(f"Unknown evaluation label: {rec['label']!r}")
+        if rec["imo"] in seen:
+            raise ValueError(f"Duplicate IMO in evaluation: {rec['imo']}")
+        seen.add(rec["imo"])
         if rec["identities"]:
-            groups["sanctioned" if rec["label"] == "sanctioned" else "control"].append(score_record(rec))
+            groups[rec["label"]].append(score_record(rec))
     pos = [s for s, _ in groups["sanctioned"]]
     neg = [s for s, _ in groups["control"]]
     out = {

@@ -12,8 +12,8 @@
 
 | Name | Flag | MMSI | AIS period | Registry-confirmed |
 |---|---|---|---|---|
-| BAOLONG36 | Guyana | 750342000 | Nov 2022 to May 2023 | no |
-| BAOLONG36 | Cameroon | 613003836 | Nov 2022 to Sep 2023 | no |
+| BAOLONG36 | Guyana | 750342000 | 17–24 Nov 2022; 29 Nov 2022 to 12 May 2023 | no |
+| BAOLONG36 | Cameroon | 613003836 | 24 Nov 2022 to 10 Feb 2023; 20 Jul to 11 Sep 2023 | no |
 | XINGSHUN39 | Tanzania | 677087200 | Mar 2024 to Jan 2025 (one more message Aug 2025) | no |
 | SHUNXING39 | Cameroon | 613003889 | Sep 2024 to 3 Jan 2025 | no, no IMO broadcast |
 
@@ -42,7 +42,7 @@ association but would not have been available for a warning before the incident.
 * After XINGSHUN39 reappears in GFW, its track zig-zags north of Keelung for hours (15.2 nm sailed for 3.1 nm net
   between 08:52 and 14:32 UTC), mostly at 0–5 kn; around 21:00 UTC it was making 1–2.5 kn.
 * GFW has no position for either identity between 29 Dec 20:07 UTC and 31 Dec 14:07 UTC (42 h).
-* BAOLONG36 has overlapping first/last dates under Guyana and Cameroon flags for about five months
+* BAOLONG36 has overlapping first/last dates under Guyana and Cameroon flags from 29 Nov 2022 to 10 Feb 2023
   in 2022/23. Those dates alone do not establish continuous parallel use.
 
 My initial manual search found no GFW loitering events for this ship. I have not established which
@@ -51,7 +51,7 @@ checks use separate rules and have no distance-from-shore limit.
 
 ## Warning signals (tool)
 
-`MULTI_IDENTITY` (4), `FLAG_CHANGE` (Cameroon → Tanzania, both on the Paris MoU black list), `NO_REGISTRY`,
+`MULTI_IDENTITY` (four name/flag combinations), `FLAG_CHANGE` (Guyana → Cameroon and Cameroon → Tanzania), `NO_REGISTRY`,
 `IMO_HIDDEN`, `CONCURRENT_IDENTITIES` (twice), `IDENTITY_HANDOVER`, `AIS_GAP`, `SLOW_LOITERING`, `ZIGZAG`,
 `CABLE_CROSSING_SLOW` (the crossing above, and four more by XINGSHUN39 on 3 Jan).
 

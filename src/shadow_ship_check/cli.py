@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List
 
-from . import __version__, watchlist
+from . import __version__, data_path, watchlist
 from .analyze import analyze, analyze_fixture, load_fixture
 from .cases import ALL, CASES
 from .geo import CableLayer
@@ -20,7 +20,7 @@ from .gfw import GFWClient, identities_from_entries
 from .models import Identity, normalize_name
 from .report import to_json, to_markdown, to_markdown_case, to_text
 
-DEFAULT_FIXTURES = Path(__file__).resolve().parents[2] / "data" / "fixtures"
+DEFAULT_FIXTURES = data_path() / "fixtures"
 
 
 def _date(s: str) -> datetime:
@@ -39,6 +39,8 @@ def _sanctions(args):
 
 
 def _emit(report, args, title=None) -> None:
+    if args.json and args.md and Path(args.json).resolve() == Path(args.md).resolve():
+        raise ValueError("Markdown and JSON output paths must differ")
     if args.json:
         Path(args.json).write_text(to_json(report), encoding="utf-8")
     if args.md:
@@ -56,6 +58,8 @@ def _same_hull(identities: List[Identity], query: str) -> List[Identity]:
     """Keep identities that share the queried IMO/MMSI (search results are fuzzy)."""
     q = query.strip()
     imos = {i.imo for i in identities if q in (i.imo, i.mmsi) and i.imo}
+    if len(imos) > 1:
+        raise ValueError("This identifier matches multiple IMO numbers; check each IMO separately")
     return [i for i in identities if q in (i.imo, i.mmsi) or (i.imo and i.imo in imos)]
 
 
@@ -90,9 +94,13 @@ def cmd_check(args) -> int:
         for m in sorted({i.mmsi for i in raw if i.mmsi}):
             lookups[m] = [i for i in identities_from_entries(client.search_raw(m), dedupe=False) if i.mmsi == m]
         # the hull's recent names: does the name also appear under other MMSIs?
-        for name in sorted({i.name for i in raw if i.name and i.end and i.end >= start - 3 * 365 * timedelta(days=1)})[
-            :3
-        ]:
+        recent = sorted(
+            (i for i in raw if i.name and i.end and i.end >= start - 3 * 365 * timedelta(days=1)),
+            key=lambda i: (i.end, i.start or i.end, i.name),
+            reverse=True,
+        )
+        names = list(dict.fromkeys(i.name for i in recent))[:3]
+        for name in names:
             hits = [
                 i
                 for i in identities_from_entries(client.search_raw(name), dedupe=False)
@@ -121,7 +129,10 @@ def cmd_check(args) -> int:
             continue
         pts = client.track(vid, start - pad, fetch_end)
         if pts:
-            tracks.setdefault(_label(ident), []).extend(pts)
+            label = _label(ident)
+            if label in tracks:
+                label += f" [{vid}]"
+            tracks[label] = pts
     for v in tracks.values():
         v.sort(key=lambda p: p.t)
     if not tracks:
@@ -147,6 +158,8 @@ def cmd_check(args) -> int:
         as_of=as_of,
         sanctions_list=_sanctions(args),
     )
+    if linked:
+        report.notes.append("Additional identities were linked manually with --also; the score depends on that choice.")
     _emit(report, args)
     return 0
 
@@ -161,6 +174,10 @@ def _dedupe(identities: List[Identity]) -> List[Identity]:
 
 
 def cmd_case(args) -> int:
+    if args.name == "all" and args.json:
+        raise ValueError("JSON output requires one case name")
+    if args.name == "all" and args.before_incident:
+        raise ValueError("case all already compares both views; --before-incident requires one case name")
     names = list(ALL) if args.name == "all" else [args.name]
     cables = _cables(args)
     listing = _sanctions(args)
@@ -231,7 +248,7 @@ def main(argv=None) -> int:
         "--as-of", help="filter timestamps at this UTC time; current identity links and registry matches remain"
     )
     _cable_args(c)
-    c.add_argument("--no-mmsi-lookup", action="store_true", help="skip the extra search for MMSI reuse")
+    c.add_argument("--no-mmsi-lookup", action="store_true", help="skip the extra MMSI and name searches")
     c.add_argument(
         "--also",
         action="append",
@@ -265,6 +282,9 @@ def main(argv=None) -> int:
         return args.func(args)
     except (urllib.error.URLError, http.client.HTTPException, TimeoutError) as exc:
         print(f"Could not reach Global Fishing Watch: {exc}", file=sys.stderr)
+        return 2
+    except (ValueError, OSError, KeyError, TypeError, OverflowError) as exc:
+        print(f"Could not process the input or output: {exc}", file=sys.stderr)
         return 2
 
 

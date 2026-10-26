@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from shadow_ship_check.models import TrackPoint  # noqa: E402
+from shadow_ship_check.signals import connected  # noqa: E402
 
 OUT = ROOT / "docs" / "img"
 INK, MUTED, GRID = "#1f2933", "#7b8794", "#e4e7eb"
@@ -85,6 +86,18 @@ def utc(*a):
     return datetime(*a, tzinfo=timezone.utc)
 
 
+def track_xy(points):
+    """Break plotted lines at segment boundaries and gaps over three hours."""
+    xs, ys = [], []
+    for n, p in enumerate(points):
+        if n and not connected(points[n - 1], p):
+            xs.append(float("nan"))
+            ys.append(float("nan"))
+        xs.append(p.lon)
+        ys.append(p.lat)
+    return xs, ys
+
+
 def fig_xingshun(polys):
     a = pts("xingshun_39", "xingshun_39", utc(2024, 12, 28), utc(2025, 1, 4, 6))
     b = pts("xingshun_39", "shunxing39_cmr", utc(2024, 12, 28), utc(2025, 1, 4, 6))
@@ -92,16 +105,14 @@ def fig_xingshun(polys):
     base(ax, polys, (121.45, 122.25, 25.0, 26.2))
     cables(ax, (121.45, 122.25, 25.0, 26.2), ("unnamed telecom (OSM way 1334156416)",))
     ax.plot(
-        [x.lon for x in b],
-        [x.lat for x in b],
+        *track_xy(b),
         color=C2,
         lw=1.4,
         zorder=3,
         label="SHUNXING39 · Cameroon · MMSI 613003889 · no IMO",
     )
     ax.plot(
-        [x.lon for x in a],
-        [x.lat for x in a],
+        *track_xy(a),
         color=C1,
         lw=1.4,
         zorder=4,
@@ -162,6 +173,8 @@ def fig_yipeng(polys):
     cables(ax, ext, hi)
     ref = median(p.speed for p in pts("yi_peng_3", "yi_peng_3") if p.speed >= 5)
     for p, q in zip(a, a[1:]):
+        if not connected(p, q):
+            continue
         rate = haversine_nm(p.lat, p.lon, q.lat, q.lon) / max((q.t - p.t).total_seconds() / 3600, 1e-6)
         ax.plot([p.lon, q.lon], [p.lat, q.lat], color=C2 if rate <= 0.7 * ref else C1, lw=1.8, zorder=3)
     layer = CableLayer.bundled()
@@ -173,6 +186,8 @@ def fig_yipeng(polys):
         "C-Lion 1": ("crosses C-Lion1\n18 Nov 01:39-03:10 UTC, 6.2 kn\n(failure 02:00 UTC)", (14.75, 56.55)),
     }  # fmt: skip
     for p, q in zip(a, a[1:]):
+        if not connected(p, q):
+            continue
         for name in layer.crossed((p.lon, p.lat), (q.lon, q.lat)):
             if name in notes:
                 text, xy = notes.pop(name)
@@ -197,15 +212,15 @@ def fig_hongtai(polys):
     a = pts("hong_tai_58", "hong_tai_58", utc(2025, 2, 20), utc(2025, 2, 26))
     fig, ax = plt.subplots(figsize=(6.4, 6.4), dpi=160)
     base(ax, polys, (119.85, 120.35, 22.6, 23.4))
-    ax.plot([x.lon for x in a], [x.lat for x in a], color=C1, lw=1.3, zorder=3)
-    anch = [x for x in a if utc(2025, 2, 22, 10, 40) <= x.t <= utc(2025, 2, 24, 18, 57)]
+    ax.plot(*track_xy(a), color=C1, lw=1.3, zorder=3)
+    anch = [x for x in a if utc(2025, 2, 22, 10, 40) <= x.t <= utc(2025, 2, 24, 18, 57) and x.speed <= 3]
     ax.scatter(
         [x.lon for x in anch],
         [x.lat for x in anch],
         s=4,
         color=C2,
         zorder=4,
-        label="stationary 22 Feb 10:40 – 24 Feb 18:57 UTC (~56 h)",
+        label="AIS speed <= 3 kn, 22–24 Feb (positions only)",
     )
     dep = [x for x in a if x.t >= utc(2025, 2, 24, 19, 10)][0]
     ax.annotate(

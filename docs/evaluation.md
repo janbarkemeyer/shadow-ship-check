@@ -36,10 +36,10 @@ ssc eval
 | | Sanctioned (n = 300) | Random ships (n = 300) |
 |---|---|---|
 | Median score | 50 | 10 |
-| Score ≥ 20 (MEDIUM or HIGH) | 83 % | 32 % |
+| Score ≥ 20 (MEDIUM or HIGH) | 83 % | 31 % |
 | Score ≥ 50 (HIGH) | 54 % | 8 % |
 
-AUC 0.83 (95 % bootstrap interval 0.80–0.87) measures how often a sanctioned vessel ranks above a
+AUC 0.83 (95 % bootstrap interval 0.80–0.86) measures how often a sanctioned vessel ranks above a
 control, counting tied scores as half a win. The bootstrap resamples vessels within each group
 1,000 times with seed 20261026. It does not account for operator clusters, selection bias, uncertain
 labels or hindsight in the source data.
@@ -48,29 +48,32 @@ Share of ships with each signal:
 
 | Signal | Sanctioned | Random ships |
 |---|---|---|
-| `MULTI_IDENTITY` | 87 % | 39 % |
+| `MULTI_IDENTITY` | 87 % | 40 % |
 | `FLAG_CHANGE` | 79 % | 17 % |
-| `REGISTRY_LOST` | 73 % | 28 % |
+| `REGISTRY_LOST` | 73 % | 29 % |
 | `MMSI_REUSE` | 23 % | 16 % |
-| `CONCURRENT_IDENTITIES` | 8 % | 3 % |
-| `IMO_HIDDEN` | 4 % | 8 % |
+| `CONCURRENT_IDENTITIES` | 8 % | 4 % |
+| `IMO_HIDDEN` | 3 % | 6 % |
 | `NAME_ON_OTHER_MMSI` | 4 % | 5 % |
 | `MMSI_FLAG_MISMATCH` | 2 % | 0 % |
 | `NO_REGISTRY` | 1 % | 7 % |
 
-Flag in use at the reference date: the sanctioned ships fly Russia (68), Panama (57), Comoros (27),
-Gabon (27), Sierra Leone (21), Barbados (19), Guinea (15), Cameroon (13) …; the controls Panama (36),
-Liberia (27), Marshall Islands (16), China (14), Malta, Japan, Singapore (11 each) … On the Paris MoU
-list, 50 % of the sanctioned ships were under a grey or black flag, against 10 % of the controls.
+Flag selected at the reference date: the sanctioned ships have Russia (68), Panama (55), Comoros (28),
+Gabon (28), Sierra Leone (22), Barbados (18), Guinea (15), Cameroon (13) …; the controls Panama (35),
+Liberia (27), Marshall Islands (16), China (14), Japan and Singapore (11 each), Malta (10) … On the Paris MoU
+list, 51 % of the sanctioned ships have a selected grey or black flag, against 10 % of the controls.
 
 ## Interpretation and limitations
 
 * Flag and registry rules alone reach an AUC of 0.83, the same
   as the full score. The identity group alone reaches 0.79, mostly through `MULTI_IDENTITY`, which
   is largely the same sale-and-reflag event seen from another angle.
+* The flag-change rule alone reaches AUC 0.84, compared with 0.83 for the full score. This does not
+  establish that it is superior: a paired vessel bootstrap includes zero for the difference, and
+  neither model has an untouched test here. It does leave the extra value of the total score unproven.
 * Missing IMO fields and names under additional MMSIs occur in only a few percent of the sampled
   sanctioned vessels, with no higher observed shares than among controls. Overlapping identity
-  dates occur in 8 % vs. 3 %. Track-based handovers and parallel tracks are not tested here because
+  dates occur in 8 % vs. 4 %. Track-based handovers and parallel tracks are not tested here because
   the sample has no positions. These results do not establish the general value of the Taiwan patterns.
 * This does not test prediction of cable incidents. The labels are UK sanctions designations,
   not confirmed cable damage or deliberate AIS manipulation. Designation criteria can themselves
@@ -102,8 +105,9 @@ and full request log are not bundled, so the acquisition and sampling cannot be 
 repository alone. The current live command searches up to three recent names; this sample searched
 the latest name.
 
-An implementation correction retains all matching name-search rows for an additional MMSI, rather
-than only the first row. With the same raw sample, AUC changes from 0.834017 to 0.834239 and HIGH
-sanctioned vessels from 161 to 162; HIGH controls remain 24. Rounded headline results are unchanged.
-`NAME_ON_OTHER_MMSI` changes from 3 % to 4 % among sanctioned vessels. These are corrected calculations,
-not an improvement demonstrated on new data.
+The earlier name-search correction changed AUC from 0.834017 to 0.834239, with 162 sanctioned vessels
+and 24 controls reaching HIGH. Further implementation corrections preserve separate identity episodes,
+exclude conflicting IMO claims from a hull's records, restrict MMSI reuse to that hull's MMSIs and
+select registry identities independently of row order. Registry IMO numbers are retained when AIS omits them; metadata variants do not count as additional identities, mismatches or same-dated flag transitions. Missing IMO fields now require matching flag
+and period. With the same raw sample, AUC is 0.832306, with 161 sanctioned vessels and 24 controls
+reaching HIGH. These are recalculations of reviewed data, not an improvement demonstrated on new data.

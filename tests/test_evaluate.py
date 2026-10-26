@@ -17,7 +17,12 @@ def _info(name, flag, mmsi, imo, start, end):
 
 
 def _record(label, infos, as_of="2025-06-01"):
-    return {"imo": "1", "as_of": as_of, "label": label, "identities": [{"registryInfo": [], "selfReportedInfo": infos}]}
+    return {
+        "imo": infos[0]["imo"],
+        "as_of": as_of,
+        "label": label,
+        "identities": [{"registryInfo": [], "selfReportedInfo": infos}],
+    }
 
 
 def test_auc():
@@ -56,7 +61,7 @@ def test_evaluate_end_to_end(tmp_path):
 
 
 def test_bundled_evaluation_set():
-    """Regression guard: rule changes that wreck the out-of-sample separation show up here."""
+    """Regression guard on the reviewed sample, not an independent validation."""
     data = evaluate.load()
     r = evaluate.evaluate(data)
     assert r["n"] == {"sanctioned": 300, "control": 300}

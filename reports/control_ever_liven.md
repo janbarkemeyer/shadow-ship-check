@@ -31,11 +31,11 @@ Retrospective timestamp filter of the bundled snapshot. Current identity links, 
 
 ##### 3 identities linked to the same hull (2 in the 5 years before 2025-02-26) (`MULTI_IDENTITY`, +0)
 
-- * EVER LIVEN / TWN / MMSI 416481000 (2013-04-06 - 2026-10-23, registry + AIS)
+- \* EVER LIVEN / TWN / MMSI 416481000 (2013-04-06 - 2026-10-23, registry + AIS)
 -   JIRENYU  00085 / CHN / MMSI 412286696 (2015-04-11 - 2015-10-15, self-reported AIS only)
-- * EVER LIVEN / TWN / MMSI 416481100 (2022-06-15 - 2022-08-10, self-reported AIS only)
+- \* EVER LIVEN / TWN / MMSI 416481100 (2022-06-15 - 2022-08-10, self-reported AIS only)
 
-* = in use during the look-back period (scored); others are history.
+\* = dated use during the look-back period (scored); other records are outside it or undated.
 
 ##### Overlapping first/last dates for linked AIS identities (`CONCURRENT_IDENTITIES`, +5)
 

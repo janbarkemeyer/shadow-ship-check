@@ -13,9 +13,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from . import data_path
 from .models import Identity, Signal
 
-BUNDLED = Path(__file__).resolve().parents[2] / "data" / "sanctions" / "uk_vessels.csv"
+BUNDLED = data_path() / "sanctions" / "uk_vessels.csv"
 REGIME = {"Russia": "Russia regime", "DPRK": "DPRK regime", "Libya": "Libya regime"}
 
 

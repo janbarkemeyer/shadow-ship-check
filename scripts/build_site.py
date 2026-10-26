@@ -2,8 +2,8 @@
 
     python scripts/build_site.py            # writes site/index.html and site/img/
 
-Every number on the page is computed here from the bundled fixtures and the evaluation set,
-so the page cannot drift from the code.
+Case scores and evaluation tables are computed from the bundled data.
+Narrative dates, captions and generated figures need a separate consistency check.
 """
 
 from __future__ import annotations
@@ -126,7 +126,7 @@ validation set. The comparison measures separation of these groups, not predicti
 <tbody>{rows}</tbody></table></div>
 <p class="cap">Share of ships in each group with the signal. Details and caveats:
 <a href="{REPO}/blob/main/docs/evaluation.md">docs/evaluation.md</a>.</p>
-<p>The 8 % HIGH share applies to these 300 controls, not the world fleet or false alarms for cable incidents.
+<p>The {pct(hi["controls_flagged"])} HIGH share applies to these {r["n"]["control"]} controls, not the world fleet or false alarms for cable incidents.
 Flag and registry signals alone reach almost the same AUC as the combined score. The bootstrap interval does
 not include sampling bias, uncertain labels or hindsight in the source data.</p>
 """
@@ -170,7 +170,7 @@ threshold; these reconstructed crossings do not establish anchor use or responsi
 pip install -e .
 ssc case all                 # reference cases, offline
 ssc eval                     # sanctioned-vessel comparison, offline
-ssc check 9224984 --start 2024-11-16 --end 2024-11-19   # any ship, live from GFW</pre>
+ssc check 9224984 --start 2024-11-16 --end 2024-11-19   # known IMO, GFW access required</pre>
 <footer>Vessel data © Global Fishing Watch (CC BY-NC 4.0) · cable routes © OpenStreetMap contributors (ODbL) ·
 sanctions: UK Sanctions List (OGL v3) via OpenSanctions (CC BY-NC 4.0) · land: Natural Earth · code: MIT ·
 <a href="{REPO}">{REPO.removeprefix("https://")}</a></footer>

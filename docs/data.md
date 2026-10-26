@@ -33,10 +33,21 @@ The offsets are indices into the value list where each track segment starts. The
 A GFW search result can carry `selfReportedInfo` (what the ship broadcasts in AIS) and `registryInfo`
 (matching records from public registries such as IMO or regional fishery bodies). An AIS identity is
 treated as registry-confirmed when the same GFW entry holds a registry record with the same
-non-empty MMSI. This is a match in the available data, not an independent verification of the hull,
+non-empty MMSI and no conflicting known IMO number. This is a match in the available data, not an independent verification of the hull,
 flag or legal registration. GFW documents uneven registry coverage by flag and vessel size in its
 [vessel identity caveats](https://globalfishingwatch.org/datasets-and-code-vessel-identity/).
 `NO_REGISTRY` and `REGISTRY_LOST` can therefore reflect coverage rather than a change in legal status.
+At a reference date, the latest-starting covering identity is selected; if none covers it, the
+latest-ended dated identity is used. Equal dates have a deterministic tie-break, not an independent
+resolution of conflicting records.
+
+The decoder rejects truncated messages, invalid segment offsets, invalid coordinates and unavailable
+AIS speeds. The CLI reports these as input errors rather than scoring a partial track. Separate GFW
+track IDs remain separate even when their displayed name, flag and MMSI are identical. Movement
+calculations and figures do not connect segments or gaps longer than three hours. The local planar
+cable intersection check rejects tracks or routes spanning the date line. A crossing at an internal
+cable vertex counts when the route passes from one side of the track to the other; a tangent touch,
+collinear overlap or contact only at a track endpoint does not count as a proper crossing.
 
 ## Known limitations
 

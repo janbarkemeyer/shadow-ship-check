@@ -7,6 +7,8 @@ import math
 from pathlib import Path
 from typing import Iterable, List, Tuple
 
+from . import data_path
+
 EARTH_RADIUS_NM = 3440.065
 
 
@@ -15,7 +17,7 @@ def haversine_nm(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     dlat = r(lat2 - lat1)
     dlon = r(lon2 - lon1)
     a = math.sin(dlat / 2) ** 2 + math.cos(r(lat1)) * math.cos(r(lat2)) * math.sin(dlon / 2) ** 2
-    return 2 * EARTH_RADIUS_NM * math.asin(math.sqrt(a))
+    return 2 * EARTH_RADIUS_NM * math.asin(math.sqrt(max(0.0, min(1.0, a))))
 
 
 def point_segment_nm(lat: float, lon: float, a: Tuple[float, float], b: Tuple[float, float]) -> float:
@@ -34,7 +36,7 @@ def point_segment_nm(lat: float, lon: float, a: Tuple[float, float], b: Tuple[fl
     return math.hypot(px, py) * 60.0  # 1 degree latitude ~ 60 nm
 
 
-BUNDLED_CABLES = Path(__file__).resolve().parents[2] / "data" / "cables"
+BUNDLED_CABLES = data_path() / "cables"
 
 
 class CableLayer:
@@ -46,6 +48,14 @@ class CableLayer:
     """
 
     def __init__(self, lines: List[Tuple[str, List[Tuple[float, float]]]]):
+        for _, coords in lines:
+            if len(coords) < 2 or any(
+                not (math.isfinite(lon) and math.isfinite(lat) and -180 <= lon <= 180 and -90 <= lat <= 90)
+                for lon, lat in coords
+            ):
+                raise ValueError("Invalid cable coordinates")
+            if any(abs(a[0] - b[0]) > 180 for a, b in zip(coords, coords[1:])):
+                raise ValueError("Cable geometry crossing the date line is not supported")
         self.lines = lines
         self._boxes = [
             (min(c[1] for c in cs), max(c[1] for c in cs), min(c[0] for c in cs), max(c[0] for c in cs))
@@ -94,12 +104,24 @@ class CableLayer:
 
     def crossed(self, p: Tuple[float, float], q: Tuple[float, float]) -> List[str]:
         """Names of the routes crossed by the straight line p-q (each (lon, lat))."""
+        if abs(p[0] - q[0]) > 180:
+            raise ValueError("Track geometry crossing the date line is not supported")
         lo0, lo1, la0, la1 = min(p[0], q[0]), max(p[0], q[0]), min(p[1], q[1]), max(p[1], q[1])
         out = []
         for (name, coords), (b0, b1, c0, c1) in zip(self.lines, self._boxes):
             if la1 < b0 or la0 > b1 or lo1 < c0 or lo0 > c1 or name in out:
                 continue
-            if any(segments_cross(p, q, a, b) for a, b in zip(coords, coords[1:])):
+            crosses_leg = any(segments_cross(p, q, a, b) for a, b in zip(coords, coords[1:]))
+            crosses_vertex = any(
+                c != p
+                and c != q
+                and lo0 <= c[0] <= lo1
+                and la0 <= c[1] <= la1
+                and _orient(p, q, c) == 0
+                and _orient(p, q, a) * _orient(p, q, b) < 0
+                for a, c, b in zip(coords, coords[1:], coords[2:])
+            )
+            if crosses_leg or crosses_vertex:
                 out.append(name)
         return out
 

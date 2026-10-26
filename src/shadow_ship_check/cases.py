@@ -15,8 +15,8 @@ CASES = {
         "imo": "9329760",
         "incident": "2024-12-25",
         "region": "Baltic Sea (Gulf of Finland)",
-        "status": "Suspected. Finland charged the captain and two officers; in Oct 2025 the "
-        "Helsinki District Court dismissed the case for lack of jurisdiction (appeal possible).",
+        "status": "Suspected involvement. On 27 Aug 2026, the Helsinki Court of Appeal overturned "
+        "the jurisdiction dismissal and returned the case to the district court. This was not a finding of guilt.",
         "window": (_utc("2024-12-23T00:00"), _utc("2024-12-28T23:59")),
         "primary_track": "eagle_s",
         # data cut-off for the pre-incident score: Estlink 2 failure
@@ -25,7 +25,7 @@ CASES = {
         "parallel": [],
     },
     "xingshun_39": {
-        "title": "Xingshun 39 (Shunxing 39) - TPE cable north of Keelung",
+        "title": "Xingshun 39 (Shunxing 39) - cable damage north of Keelung",
         "imo": "8358427",
         "incident": "2025-01-03",
         "region": "Taiwan (north coast, Keelung)",
@@ -33,8 +33,8 @@ CASES = {
         "it was then allowed to continue to South Korea.",
         "window": (_utc("2025-01-02T00:00"), _utc("2025-01-05T00:00")),
         "primary_track": "xingshun_39",
-        # data cut-off for the pre-incident score (conservative): the CGA got the damage report on
-        # 3 Jan 04:40 UTC and said the ship had left the area about nine hours before that
+        # Conservative comparison cut-off, earlier than the report and approximate incident time.
+        # The CGA received the damage report at 04:40 UTC on 3 Jan; it is not the damage time.
         "as_of": _utc("2025-01-02T12:00"),
         "parallel": ["xingshun_39", "shunxing39_cmr"],
         "movement_tracks": ["shunxing39_cmr"],
@@ -42,6 +42,7 @@ CASES = {
         # on 3 Jan -> damage around 07:40 local = 23:40 UTC on 2 Jan (approximate)
         "incident_time": _utc("2025-01-02T23:40"),
         "linked_mmsis": ["613003889"],
+        "notes": ["SHUNXING39 without IMO is linked manually using later name and track evidence."],
         "track_labels": {
             "xingshun_39": "XINGSHUN39/TZA/677087200",
             "shunxing39_cmr": "SHUNXING39/CMR/613003889 (no IMO)",
@@ -52,13 +53,15 @@ CASES = {
         "imo": "8357069",
         "incident": "2025-02-25",
         "region": "Taiwan Strait (Taiwan-Penghu)",
-        "status": "Captain convicted by the Tainan District Court (June 2025, 3 years) for "
-        "intentionally damaging the cable (first instance).",
+        "status": "The Tainan District Court's first-instance judgment of 12 Jun 2025 imposed a three-year "
+        "sentence for damaging the cable with conditional intent. "
+        "The final procedural outcome is not established here.",
         "window": (_utc("2025-02-22T00:00"), _utc("2025-02-26T00:00")),
         "primary_track": "hong_tai_58",
         # data cut-off for the pre-incident score: 00:00 local on 25 Feb; the break was reported for the early morning
         "as_of": _utc("2025-02-24T16:00"),
         "incident_time": _utc("2025-02-24T19:03"),
+        "notes": ["Linked identities may belong to multiple physical hulls; the score describes an identity cluster."],
         "parallel": ["hong_tai_58_dec", "hong_tai_58_imo_identity", "hongta_8", "hongta8_noimo"],
         "track_labels": {
             "hong_tai_58_dec": "HONGTAI58/671756000 (no IMO)",
@@ -72,8 +75,8 @@ CASES = {
         "imo": "9224984",
         "incident": "2024-11-17/18",
         "region": "Baltic Sea (Gotland - Bornholm)",
-        "status": "Suspected. No charges; Swedish prosecutors were not allowed on board, and US officials "
-        "were reported to assess the damage as accidental.",
+        "status": "Suspected involvement. Public reporting on the Swedish investigation does not establish "
+        "whether an anchor drag was deliberate. Swedish prosecutors were not allowed on board.",
         "window": (_utc("2024-11-16T12:00"), _utc("2024-11-18T18:00")),
         "primary_track": "yi_peng_3",
         # data cut-off for the pre-incident score: BCS East-West Interlink cut around 10:00 local (EET)

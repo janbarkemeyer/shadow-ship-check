@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import json
 from dataclasses import asdict
 from typing import List, Optional
@@ -12,6 +13,13 @@ DISCLAIMER = (
     "Research indicators only. The score is not a probability or evidence of intent or responsibility for damage. "
     "LOW may reflect limited data. Data: Global Fishing Watch (CC BY-NC 4.0)."
 )
+
+
+def _md(value) -> str:
+    text = html.escape(str(value), quote=False).replace("\\", "\\\\")
+    for char in "|*_[]`":
+        text = text.replace(char, "\\" + char)
+    return text.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "<br>")
 
 
 def _sub(r: Report) -> str:
@@ -34,9 +42,8 @@ def _identity_table(r: Report) -> List[str]:
     for i in r.identities:
         a = f"{i.start:%Y-%m-%d}" if i.start else "?"
         b = f"{i.end:%Y-%m-%d}" if i.end else "?"
-        out.append(
-            f"| {i.name or '-'} | {i.flag or '-'} | {i.mmsi or '-'} | {i.imo or '-'} | {a} | {b} | {i.source_label} |"
-        )
+        cells = [i.name or "-", i.flag or "-", i.mmsi or "-", i.imo or "-", a, b, i.source_label]
+        out.append("| " + " | ".join(_md(c) for c in cells) + " |")
     return out
 
 
@@ -50,11 +57,11 @@ def _signals(r: Report, h: str = "##") -> List[str]:
             continue
         out += [f"{h}# {label} (+{sum(s.points for s in sigs)})", ""]
         for s in sigs:
-            out.append(f"{h}## {s.title} (`{s.code}`, +{s.points})")
+            out.append(f"{h}## {_md(s.title)} (`{s.code}`, +{s.points})")
             out.append("")
-            out += [f"- {e}" for e in s.evidence]
+            out += [f"- {_md(e)}" for e in s.evidence]
             if s.caveat:
-                out += ["", s.caveat]
+                out += ["", _md(s.caveat)]
             out.append("")
     return out
 
@@ -65,13 +72,13 @@ def _excerpt(r: Report, h: str = "##") -> List[str]:
     out = [
         f"{h} Track around the reported incident time",
         "",
-        f"Reported time (approximate): {r.incident_time:%Y-%m-%d %H:%M} UTC. Points within +/- 3 h:",
+        f"Reported time (approximate): {r.incident_time:%Y-%m-%d %H:%M} UTC. Points within +/- {r.excerpt_hours:g} h:",
         "",
     ]
     if r.excerpt:
         out += ["| Time (UTC) | Identity | Lat | Lon | AIS speed (kn) |", "|---|---|---|---|---|"]
         out += [
-            f"| {p.t:%Y-%m-%d %H:%M} | {lab or '-'} | {p.lat:.4f} | {p.lon:.4f} | {p.speed:.1f} |"
+            f"| {p.t:%Y-%m-%d %H:%M} | {_md(lab or '-')} | {p.lat:.4f} | {p.lon:.4f} | {p.speed:.1f} |"
             for lab, p in r.excerpt
         ]
     else:
@@ -83,15 +90,15 @@ def _summary(r: Report, n: int = 3) -> List[str]:
     top = sorted((s for s in r.signals if s.points), key=lambda s: -s.points)[:n]
     if not top:
         return ["No scored signals.", ""]
-    return [f"- {s.title} (+{s.points}): {s.evidence[0] if s.evidence else ''}" for s in top] + [""]
+    return [f"- {_md(s.title)} (+{s.points}): {_md(s.evidence[0]) if s.evidence else ''}" for s in top] + [""]
 
 
 def _notes(r: Report, h: str = "##") -> List[str]:
-    return [f"{h} Notes", ""] + [f"- {n}" for n in r.notes] + [""] if r.notes else []
+    return [f"{h} Notes", ""] + [f"- {_md(n)}" for n in r.notes] + [""] if r.notes else []
 
 
 def to_markdown(r: Report, title: Optional[str] = None) -> str:
-    out = [f"# {title or 'Shadow Ship Check: ' + r.query}", ""] + _header(r) + [f"_{DISCLAIMER}_", ""]
+    out = [f"# {_md(title or 'Shadow Ship Check: ' + r.query)}", ""] + _header(r) + [f"_{DISCLAIMER}_", ""]
     out += ["## Strongest signals", ""] + _summary(r)
     out += ["## Identities", ""] + _identity_table(r) + [""]
     out += ["## Signals", ""] + _signals(r)
@@ -102,7 +109,7 @@ def to_markdown(r: Report, title: Optional[str] = None) -> str:
 def to_markdown_case(full: Report, before: Report, title: str, case_file: Optional[str] = None) -> str:
     """One report per reference case: the pre-incident view first, then the full data."""
     cats = list(CATEGORIES)
-    out = [f"# {title}", ""]
+    out = [f"# {_md(title)}", ""]
     if case_file:
         out += [f"Case file with context and sources: [{case_file.rsplit('/', 1)[-1]}]({case_file})", ""]
     out += [
@@ -147,6 +154,10 @@ def to_text(r: Report) -> str:
         lines += [f"        {e}" for e in s.evidence[:8]]
         if len(s.evidence) > 8:
             lines.append(f"        ... {len(s.evidence) - 8} more")
+        if s.caveat:
+            lines.append(f"        {s.caveat}")
+    if r.notes:
+        lines += ["", "Notes:"] + [f"  - {n}" for n in r.notes]
     lines += ["", DISCLAIMER]
     return "\n".join(lines)
 
@@ -159,6 +170,9 @@ def to_json(r: Report) -> str:
         "subscores": r.subscores,
         "window": [w.isoformat() for w in r.window] if r.window else None,
         "as_of": r.as_of.isoformat() if r.as_of else None,
+        "incident_time": r.incident_time.isoformat() if r.incident_time else None,
+        "excerpt_hours": r.excerpt_hours,
+        "excerpt": [{"identity": label, **asdict(point)} for label, point in r.excerpt],
         "identities": [asdict(i) for i in r.identities],
         "signals": [asdict(s) for s in r.signals],
         "notes": r.notes,

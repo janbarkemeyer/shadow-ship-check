@@ -100,14 +100,14 @@ def before(name, fixtures_dir):
     return analyze_fixture(CASES[name], load_fixture(fixtures_dir / f"{name}.json"), before_incident=True)
 
 
-def test_before_incident_uses_no_later_data(fixtures_dir):
+def test_cutoff_removes_later_identity_timestamps(fixtures_dir):
     r = before("newnew_polar_bear", fixtures_dir)
     assert "BELLE ARIES" not in {i.name for i in r.identities}  # renamed only in 2025
     assert all(i.end <= CASES["newnew_polar_bear"]["as_of"] for i in r.identities if i.end)
 
 
-def test_identity_tricks_visible_before_the_incident(fixtures_dir):
-    """The thesis: camouflage patterns are observable before the damage happens."""
+def test_timestamp_filtered_cases_keep_their_documented_signals(fixtures_dir):
+    """Current links remain: these assertions do not test an advance warning."""
     xs = before("xingshun_39", fixtures_dir)
     assert {"CONCURRENT_IDENTITIES", "IDENTITY_HANDOVER"} <= codes(xs) and xs.level == "HIGH"
     ht = before("hong_tai_58", fixtures_dir)

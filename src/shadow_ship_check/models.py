@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -20,11 +21,14 @@ def parse_ts(value: Optional[str]) -> Optional[datetime]:
     with 1-6 fractional digits). Python 3.10's fromisoformat only accepts 3 or 6."""
     if not value:
         return None
+    if not isinstance(value, str):
+        raise ValueError("Identity timestamps must be ISO strings")
     value = value.replace("Z", "+00:00")
     m = re.match(r"^(.*T\d{2}:\d{2}:\d{2})\.(\d+)(.*)$", value)
     if m:
         value = f"{m.group(1)}.{m.group(2)[:6].ljust(6, '0')}{m.group(3)}"
-    return datetime.fromisoformat(value)
+    dt = datetime.fromisoformat(value)
+    return dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
 @dataclass
@@ -71,6 +75,16 @@ class TrackPoint:
     speed: float  # knots, as reported by AIS
     segment: int = 0
 
+    def __post_init__(self):
+        if not self.t.tzinfo:
+            raise ValueError("Track timestamps must include a timezone")
+        if not (
+            math.isfinite(self.lat) and -90 <= self.lat <= 90 and math.isfinite(self.lon) and -180 <= self.lon <= 180
+        ):
+            raise ValueError("Invalid track coordinates")
+        if not math.isfinite(self.speed) or not 0 <= self.speed < 102.3:
+            raise ValueError("AIS speed is invalid or unavailable")
+
     @staticmethod
     def from_row(row: list) -> "TrackPoint":
         ts, lat, lon, sp, *rest = row
@@ -113,6 +127,7 @@ class Report:
     incident_time: Optional[datetime] = None
     excerpt: List[tuple] = field(default_factory=list)  # (identity label, TrackPoint)
     as_of: Optional[datetime] = None  # data cut-off for a pre-incident view
+    excerpt_hours: float = 3.0
 
     @property
     def score(self) -> int:

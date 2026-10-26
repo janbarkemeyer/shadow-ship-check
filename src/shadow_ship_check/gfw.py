@@ -23,12 +23,13 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from typing import Iterable, List, Optional
 
+from . import __version__
 from .models import Identity, TrackPoint, normalize_name, parse_ts
 
 BASE_URL = "https://gateway.api.globalfishingwatch.org/v3"
 IDENTITY_DATASET = "public-global-vessel-identity:v5.0"
 TRACK_DATASET = "public-global-all-tracks:v4.0"
-USER_AGENT = "shadow-ship-check/0.1"
+USER_AGENT = f"shadow-ship-check/{__version__}"
 _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
@@ -50,11 +51,26 @@ class GFWClient:
 
     # -- Search -------------------------------------------------------------
     def search_raw(self, query: str) -> list:
-        body = self._get(
-            "/vessels/search",
-            [("query", query), ("datasets[0]", IDENTITY_DATASET)],
-        )
-        return json.loads(body).get("entries", [])
+        entries, offset = [], 0
+        while True:
+            body = self._get(
+                "/vessels/search",
+                [("query", query), ("datasets[0]", IDENTITY_DATASET), ("limit", 50), ("offset", offset)],
+            )
+            page = json.loads(body)
+            if not isinstance(page, dict) or not isinstance(page.get("entries"), list):
+                raise ValueError("Invalid vessel search response: missing entries")
+            entries.extend(page["entries"])
+            following = page.get("nextOffset")
+            if following is None:
+                if page.get("total", len(entries)) > len(entries):
+                    raise ValueError("Vessel search response is incomplete: no nextOffset")
+                return entries
+            if page.get("total") is not None and len(entries) >= page["total"]:
+                return entries
+            if type(following) is not int or following <= offset or not page["entries"]:
+                raise ValueError("Invalid vessel search pagination")
+            offset = following
 
     def search(self, query: str) -> List[Identity]:
         return identities_from_entries(self.search_raw(query))
@@ -62,7 +78,7 @@ class GFWClient:
     # -- Tracks -------------------------------------------------------------
     def track(self, vessel_id: str, start: datetime, end: datetime) -> List[TrackPoint]:
         body = self._get(
-            f"/vessels/{vessel_id}/tracks",
+            f"/vessels/{urllib.parse.quote(vessel_id, safe='')}/tracks",
             [
                 ("dataset", TRACK_DATASET),
                 ("fields[0]", "LONLAT"),
@@ -84,13 +100,18 @@ def identities_from_entries(entries: list, dedupe: bool = True) -> List[Identity
     """Flatten GFW search entries into a de-duplicated list of identities.
 
     An AIS identity counts as *registry confirmed* when the same GFW entry
-    also carries a registry record with the same MMSI.
+    also carries a registry record with the same non-empty MMSI and no conflicting known IMO.
     """
     out: dict = {}
     raw: List[Identity] = []
     for entry in entries:
+        if not isinstance(entry, dict):
+            raise ValueError("Vessel search entries must be objects")
+        for field in ("registryInfo", "selfReportedInfo"):
+            rows = entry.get(field) or []
+            if not isinstance(rows, list) or any(not isinstance(r, dict) for r in rows):
+                raise ValueError(f"Invalid vessel identity field {field}")
         registry = entry.get("registryInfo") or []
-        reg_mmsis = {r.get("ssvid") for r in registry}
         for s in entry.get("selfReportedInfo") or []:
             ident = Identity(
                 name=(s.get("shipname") or "").strip(),
@@ -100,7 +121,11 @@ def identities_from_entries(entries: list, dedupe: bool = True) -> List[Identity
                 callsign=s.get("callsign") or None,
                 start=parse_ts(s.get("transmissionDateFrom")),
                 end=parse_ts(s.get("transmissionDateTo")),
-                registry_confirmed=bool(s.get("ssvid")) and s["ssvid"] in reg_mmsis,
+                registry_confirmed=bool(s.get("ssvid"))
+                and any(
+                    r.get("ssvid") == s["ssvid"] and not (s.get("imo") and r.get("imo") and s["imo"] != r["imo"])
+                    for r in registry
+                ),
                 source="ais",
                 vessel_id=s.get("id"),
                 messages=s.get("messagesCounter"),
@@ -122,10 +147,13 @@ def identities_from_entries(entries: list, dedupe: bool = True) -> List[Identity
             # Registry records whose MMSI is already covered by an AIS identity
             # only confirm it (their flag field is sometimes the owner's or a
             # second register's). Registry-only identities are kept.
-            ais_keys = {(_norm(s.get("shipname")), s.get("ssvid")) for s in entry.get("selfReportedInfo") or []}
-            if (_norm(r.get("shipname")), r.get("ssvid")) in ais_keys:
+            if any(
+                (_norm(s.get("shipname")), s.get("ssvid")) == (_norm(r.get("shipname")), r.get("ssvid"))
+                and (not r.get("imo") or s.get("imo") == r["imo"])
+                for s in entry.get("selfReportedInfo") or []
+            ):
                 continue
-            if ident.key not in out:
+            if not any(i.key == ident.key and i.imo == ident.imo for i in out.values()):
                 raw.append(ident)
                 _merge(out, replace(ident))
     if not dedupe:
@@ -138,17 +166,39 @@ def _norm(name) -> str:
 
 
 def _merge(out: dict, ident: Identity) -> None:
-    prev = out.get(ident.key)
-    if prev is None:
-        out[ident.key] = ident
+    # Preserve conflicting IMO claims and separate episodes. First/last dates
+    # still describe an envelope within an episode, not continuous use.
+    matches = []
+    for key, prev in out.items():
+        if prev.key != ident.key or prev.imo != ident.imo:
+            continue
+        dates = (prev.start, prev.end, ident.start, ident.end)
+        if all(dates):
+            overlap = prev.start <= ident.end and ident.start <= prev.end
+        else:
+            overlap = (prev.start, prev.end) == (ident.start, ident.end)
+        if overlap:
+            matches.append(key)
+    if not matches:
+        out[(ident.key, ident.imo, ident.start, ident.end)] = ident
         return
+    prev = out[matches[0]]
+    for key in matches[1:]:
+        other = out.pop(key)
+        if other.start and (not prev.start or other.start < prev.start):
+            prev.start = other.start
+        if other.end and (not prev.end or other.end > prev.end):
+            prev.end = other.end
+        prev.registry_confirmed |= other.registry_confirmed
+        prev.messages = (prev.messages or 0) + (other.messages or 0)
+        prev.source = "ais" if "ais" in (prev.source, other.source) else "registry"
     # same name/flag/MMSI split over several GFW ids -> widen the time span
     if ident.start and (not prev.start or ident.start < prev.start):
         prev.start = ident.start
     if ident.end and (not prev.end or ident.end > prev.end):
         prev.end = ident.end
     prev.registry_confirmed = prev.registry_confirmed or ident.registry_confirmed
-    prev.imo = prev.imo or ident.imo
+    prev.source = "ais" if "ais" in (prev.source, ident.source) else "registry"
     prev.messages = (prev.messages or 0) + (ident.messages or 0)
 
 
@@ -164,26 +214,44 @@ def decode_varints(buf: bytes) -> List[int]:
     def varint() -> int:
         nonlocal i
         result = shift = 0
-        while True:
+        while shift < 70:
+            if i >= len(buf):
+                raise ValueError("Truncated protobuf varint")
             b = buf[i]
             i += 1
             result |= (b & 0x7F) << shift
             shift += 7
             if not b & 0x80:
                 return result
+        raise ValueError("Protobuf varint exceeds 64 bits")
 
     while i < len(buf):
         key = varint()
+        field = key >> 3
+        if not field:
+            raise ValueError("Invalid protobuf field number")
         wire = key & 7
         if wire == 2:
             length = varint()
             end = i + length
-            while i < end:
-                vals.append(_zigzag(varint()))
+            if end > len(buf):
+                raise ValueError("Truncated protobuf field")
+            if field == 1:
+                while i < end:
+                    value = varint()
+                    if i > end or value > 0xFFFFFFFF:
+                        raise ValueError("Invalid packed sint32 value")
+                    vals.append(_zigzag(value))
+            else:
+                i = end
         elif wire == 0:
             varint()
-        else:  # unexpected wire type - stop rather than mis-parse
-            break
+        elif wire in (1, 5):
+            i += 8 if wire == 1 else 4
+            if i > len(buf):
+                raise ValueError("Truncated protobuf field")
+        else:
+            raise ValueError(f"Unsupported protobuf wire type {wire}")
     return vals
 
 
@@ -195,15 +263,26 @@ def decode_value_array(buf: bytes) -> List[TrackPoint]:
     offsets are indices into the value list that start each segment.
     """
     vals = decode_varints(buf)
+    if buf and not vals and buf != b"\x0a\x00":
+        raise ValueError("Non-empty track response contains no recognised value field")
     return points_from_values(vals)
 
 
 def points_from_values(vals: List[int]) -> List[TrackPoint]:
-    if len(vals) < 2:
+    if not vals:
         return []
+    if len(vals) < 2 or vals[0] != -2147483648 or not 0 <= vals[1] <= len(vals) - 2:
+        raise ValueError("Invalid VALUE_ARRAY header")
     n = vals[1]
     offsets = vals[2 : 2 + n]
     data = vals[2 + n :]
+    if (
+        len(data) % 4
+        or (not n and data)
+        or (n and (offsets[0] != 0 or any(a > b for a, b in zip(offsets, offsets[1:]))))
+        or any(o < 0 or o > len(data) or o % 4 for o in offsets)
+    ):
+        raise ValueError("Invalid VALUE_ARRAY segment offsets or point data")
     pts: List[TrackPoint] = []
     for s in range(n):
         a = offsets[s]

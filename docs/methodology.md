@@ -18,8 +18,9 @@ adds correlated signals together:
 
 ## Reference date and look-back
 
-Every check runs against a reference date: the end of the analysis window (usually the incident).
-Identity history is weighed by how close it is to that date:
+Most identity checks use a reference date: the end of the analysis window (usually the incident).
+MMSI flag mismatches and missing IMO fields use the available identity records without a separate
+look-back limit. The dated change rules use these periods:
 
 * identity changes in the 3 years (flags) or 5 years (identities, registry) before the reference
   date score full points;
@@ -27,6 +28,11 @@ Identity history is weighed by how close it is to that date:
   reuse can still contribute 5 points under their respective rules;
 * flag changes after the reference date score +5 each, capped at 10 additional points, in the full
   report. This is a descriptive choice, not evidence that a change was a reaction to the incident.
+
+Undated records do not establish recent use. A record with one known boundary only establishes
+an observation at that boundary. Separate, non-overlapping episodes are kept separately; matching
+name/flag/MMSI records with conflicting IMO numbers are not merged. Overlapping compatible records
+still give a first/last envelope, which does not establish continuous use.
 
 The Paris MoU 2025 performance list was published on 1 July 2026. The same fixed list is used for all
 reference dates, including earlier incidents. Its inspection and detention statistics measure flag
@@ -146,8 +152,9 @@ apart at the six-hour limit; proximity alone does not establish that they are th
 The MMSI-country mapping covers a subset of prefixes; an unlisted prefix produces no mismatch
 signal. Missing dates and incomplete source coverage also limit interpretation of identity signals.
 
-Low-speed runs and speed-drop runs can bridge missing positions. Track segments and long gaps are
-not yet used to split every movement calculation. Straight-line cable intersections between sparse
+Low-speed, speed-drop and zig-zag calculations split at segment boundaries, duplicate timestamps
+and gaps longer than three hours. Cable crossings use the same segment guard. This is a conservative
+interpolation limit, not a threshold validated against independent traffic. Straight-line intersections between sparse
 points are reconstructed candidates, not observed contact with a cable or an anchor. No independent
 normal-traffic sample has measured these rules' false-positive rates.
 

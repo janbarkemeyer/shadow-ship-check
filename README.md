@@ -44,7 +44,7 @@ ship identifier ([cases/matsu_2023.md](cases/matsu_2023.md)).
 The separate comparison uses 300 vessels designated under the UK Russia sanctions regime and 300
 random valid IMO numbers with a similar prefix distribution. Identities are cut off at each
 reference date, and sanctions contribute no points. Median score 50 vs. 10; 54 % vs. 8 % reach HIGH;
-AUC 0.83 (95 % bootstrap interval 0.80–0.87). Flag and registry signals alone reach almost the same
+AUC 0.83 (95 % bootstrap interval 0.80–0.86). Flag and registry signals alone reach almost the same
 AUC. This measures separation of the sampled groups, not prediction of cable damage. One rule was
 revised while preparing the sanctioned sample, so this is not an untouched validation set.
 Details: [docs/evaluation.md](docs/evaluation.md).
@@ -69,20 +69,20 @@ ssc check 8358427 --as-of 2025-01-02T12:00 --also SHUNXING39
 With `--as-of` alone, the default window is the preceding 30 days. Times without an offset are UTC;
 times with an offset are converted to UTC. With both `--end` and `--as-of`, the earlier value is the
 effective cut-off. Install from this checkout with `pip install -e` as above;
-the offline commands read the repository's `data/` folder.
+the offline commands read the repository's `data/` folder. Built wheels include the same data.
 
 Example (`ssc case xingshun_39 --before-incident`, evidence shortened):
 
 ```
 Shadow Ship Check - IMO 8358427
 Score 100/100 (HIGH) (timestamps through 2025-01-02 12:00 UTC)
-  Identity 80 · Flag & registry 25 · Behaviour 15
+  Identity 80 · Flag & registry 40 · Behaviour 15
 ...
-[+15] FLAG_CHANGE: 1 flag change(s)
+[+30] FLAG_CHANGE: 3 flag change(s)
         2024-03-04: CMR -> TZA (Paris MoU black, ITF flag of convenience)  [BAOLONG36 -> XINGSHUN39]  (recent)
 ...
 [+20] CONCURRENT_IDENTITIES: Overlapping first/last dates for linked AIS identities
-        2022-11-24 - 2023-05-12: BAOLONG36/GUY/750342000 and BAOLONG36/CMR/613003836
+        2022-11-29 - 2023-02-10: BAOLONG36/CMR/613003836 and BAOLONG36/GUY/750342000
         2024-09-28 - 2025-01-02: XINGSHUN39/TZA/677087200 and SHUNXING39/CMR/613003889
 [+20] IDENTITY_HANDOVER: Possible identity handover (one AIS track stops, another starts nearby)
         XINGSHUN39/TZA/677087200 stops 2024-12-28 22:11 UTC at 25.163,121.753 -> SHUNXING39/CMR/613003889

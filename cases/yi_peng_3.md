@@ -15,7 +15,7 @@
 | AVRA | Liberia | 636017118 | Jul 2015 to Dec 2016 | yes |
 | YI PENG 3 | China | 414270000 | since 2016 (with IMO since Jun 2020) | no |
 
-One sale and reflagging to China eight years before the incident ; no recent identity changes detected. The
+One sale and reflagging to China eight years before the incident; no recent identity changes detected. The
 sister ship Yi Peng 5 (control vessel) has the same profile.
 
 ## What the track shows

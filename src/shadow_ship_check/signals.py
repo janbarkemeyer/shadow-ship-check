@@ -37,7 +37,11 @@ def _ref(ref: Optional[datetime]) -> datetime:
 
 
 def _overlaps(a: Identity, start: datetime, end: datetime) -> bool:
-    return (a.start or start) <= end and (a.end or end) >= start
+    if a.start and a.end:
+        return a.start <= end and a.end >= start
+    # One dated observation can establish presence at that time. An unknown
+    # boundary cannot establish presence throughout the scoring period.
+    return any(start <= d <= end for d in (a.start, a.end) if d)
 
 
 def active_at(identities: Sequence[Identity], ref: datetime) -> Optional[Identity]:
@@ -46,7 +50,19 @@ def active_at(identities: Sequence[Identity], ref: datetime) -> Optional[Identit
     if not dated:
         return None
     covering = [i for i in dated if i.end and i.end >= ref]
-    return max(covering or dated, key=lambda i: i.end or i.start)
+    # Prefer the latest start among covering records. Clipping at a cut-off
+    # makes their end dates equal, so end-only selection depends on input order.
+    return max(
+        covering or dated,
+        key=lambda i: (
+            i.start if covering else (i.end or i.start),
+            i.start,
+            i.key,
+            i.imo or "",
+            i.source,
+            i.registry_confirmed,
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +87,7 @@ def multiple_identities(
             f"{lookback_years} years before {ref:%Y-%m-%d})",
             points=pts,
             evidence=ev,
-            caveat="* = in use during the look-back period (scored); others are history.",
+            caveat="* = dated use during the look-back period (scored); other records are outside it or undated.",
         )
     ]
 
@@ -82,6 +98,7 @@ def flag_changes(
     ref = _ref(ref)
     ordered = sorted([i for i in identities if i.flag and i.start and i.end], key=lambda i: i.start)
     pts_recent, pts_after, ev = 0, 0, []
+    seen = set()
     for cur in ordered:
         # predecessor = the identity that stopped shortly before (or just after) this one started
         cands = [
@@ -93,11 +110,15 @@ def flag_changes(
         ]
         if not cands:
             continue
-        prev = max(cands, key=lambda p: p.end)
+        prev = max(cands, key=lambda p: (p.end, p.start, p.key, p.imo or "", p.source))
         if prev.flag == cur.flag:
             continue
         if prev.source == cur.source == "ais" and prev.end - cur.start >= timedelta(days=30):
             continue  # used at the same time -> reported by CONCURRENT_IDENTITIES
+        event = (prev.flag, cur.flag, cur.start)
+        if event in seen:
+            continue
+        seen.add(event)
         tier = flag_tier(cur.flag)
         tags = [f"Paris MoU {tier}" if tier != "unlisted" else "not on Paris MoU lists"]
         if is_foc(cur.flag):
@@ -142,7 +163,7 @@ def registry_confirmation(
                 code="REGISTRY_LOST",
                 title="Selected AIS identity has no registry match in GFW; an earlier identity did",
                 points=15 if recent else 5,
-                evidence=[f"last confirmed: {last.label()}", f"in use at {ref:%Y-%m-%d}: {current.label()}"],
+                evidence=[f"last confirmed: {last.label()}", f"selected for {ref:%Y-%m-%d}: {current.label()}"],
                 caveat="GFW registry coverage is incomplete; a missing match does not establish invalid registration."
                 + (
                     ""
@@ -156,7 +177,7 @@ def registry_confirmation(
             code="NO_REGISTRY",
             title="No identity of this hull is confirmed by a registry in GFW",
             points=10,
-            evidence=[f"in use at {ref:%Y-%m-%d}: {current.label()}"],
+            evidence=[f"selected for {ref:%Y-%m-%d}: {current.label()}"],
             caveat="GFW registry coverage varies by flag and access level; "
             "a missing match is not proof of non-registration.",
         )
@@ -164,12 +185,15 @@ def registry_confirmation(
 
 
 def mmsi_flag_mismatch(identities: Sequence[Identity]) -> List[Signal]:
-    ev = []
+    ev, seen = [], set()
     for i in identities:
         if i.source != "ais":
             continue
         mid_flag = flag_from_mmsi(i.mmsi)
         if mid_flag and i.flag and mid_flag != i.flag:
+            if i.key in seen:
+                continue
+            seen.add(i.key)
             ev.append(f"{i.name}: MMSI {i.mmsi} belongs to {mid_flag}, but broadcasts flag {i.flag}")
     if not ev:
         return []
@@ -186,20 +210,27 @@ def mmsi_reuse(
     own_imos = {i.imo for i in identities if i.imo}
     close, far = [], []
     for mmsi, others in lookups.items():
+        if not any(i.mmsi == mmsi for i in identities):
+            continue
         users = [i for i in identities if i.mmsi == mmsi and i.start and i.end]
         for o in others:
-            if o.mmsi != mmsi or not o.name or o.key[0] in own_names or (o.imo and o.imo in own_imos):
+            if o.mmsi != mmsi or not o.name or (o.imo and o.imo in own_imos) or (o.key[0] in own_names and not o.imo):
                 continue
             line = f"MMSI {mmsi} also used by {o.label()}" + (f", IMO {o.imo}" if o.imo else "")
             near = any(_overlaps(o, u.start - near_years * YEAR, u.end + near_years * YEAR) for u in users)
             (close if near else far).append(line + ("  (within %d years)" % near_years if near else ""))
     if not close and not far:
         return []
-    ev = close + far[:5] + ([f"... {len(far) - 5} older uses"] if len(far) > 5 else [])
+    ev = (
+        close
+        + far[:5]
+        + ([f"... {len(far) - 5} further uses outside the dated proximity check"] if len(far) > 5 else [])
+    )
     return [
         Signal(
             code="MMSI_REUSE",
-            title=f"MMSI shared with other vessels ({len(close)} within {near_years} years, {len(far)} older)",
+            title=f"MMSI shared with other vessels ({len(close)} within {near_years} years, "
+            f"{len(far)} outside or undated)",
             points=15 if close else 5,
             evidence=ev,
             caveat="Legitimate MMSI reassignment and errors in identity linking are possible.",
@@ -232,6 +263,7 @@ def name_on_other_mmsi(identities: Sequence[Identity], lookups: Optional[Dict[st
             if not (
                 o.start
                 and o.end
+                and o.flag
                 and any(i.flag == o.flag and o.start <= i.end and o.end >= i.start for i in usage[o.key[0]])
             ):
                 continue
@@ -257,11 +289,16 @@ def imo_hidden(identities: Sequence[Identity], lookups: Optional[Dict[str, List[
     """The hull's known name/MMSI also broadcast without an IMO number."""
     if not lookups:
         return []
-    own = {(i.key[0], i.mmsi) for i in identities if i.imo}
+    own = [i for i in identities if i.imo and i.flag and i.start and i.end]
     ev = []
     for others in lookups.values():
         for o in others:
-            if o.imo or (o.key[0], o.mmsi) not in own:
+            if (
+                o.imo
+                or not o.start
+                or not o.end
+                or not any(i.key == o.key and o.start <= i.end and o.end >= i.start for i in own)
+            ):
                 continue
             ev.append(f"{o.label()} - same name and MMSI, but no IMO number broadcast")
     if not ev:
@@ -292,10 +329,12 @@ def concurrent_identities(
     ref = _ref(ref)
     lo_limit = ref - lookback_years * YEAR
     named = [i for i in identities if i.name and i.start and i.end and i.source == "ais"]
-    ev, score = [], 0
+    ev, score, scored_pairs = [], 0, set()
     for a_i in range(len(named)):
         for b_i in range(a_i + 1, len(named)):
             a, b = named[a_i], named[b_i]
+            if a.key == b.key:
+                continue  # IMO metadata variants are not distinct AIS identities
             lo, hi = max(a.start, b.start), min(a.end, b.end)
             if (hi - lo) < timedelta(days=min_overlap_days):
                 continue
@@ -307,7 +346,10 @@ def concurrent_identities(
             if not recent:
                 line += f"  (less than {min_overlap_days:g} days inside the scoring period, not scored)"
             else:
-                score += 5 if same else 20
+                pair = tuple(sorted((a.key, b.key)))
+                if pair not in scored_pairs:
+                    score += 5 if same else 20
+                    scored_pairs.add(pair)
             ev.append(line)
     if not ev:
         return []
@@ -316,7 +358,7 @@ def concurrent_identities(
             code="CONCURRENT_IDENTITIES",
             title="Overlapping first/last dates for linked AIS identities",
             points=min(20, score),
-            evidence=ev,
+            evidence=list(dict.fromkeys(ev)),
             caveat="Overlap is computed from first/last AIS message per identity; check the tracks "
             "(handover / parallel signals).",
         )
@@ -415,13 +457,15 @@ def parallel_tracks(
 def _first_parallel(a, b, max_dt, min_nm) -> Optional[Tuple[TrackPoint, TrackPoint, float]]:
     j = 0
     for p in a:
-        while j < len(b) - 1 and b[j + 1].t <= p.t:
+        while j < len(b) and b[j].t < p.t - max_dt:
             j += 1
-        for q in b[max(0, j - 1) : j + 2]:
-            if abs(q.t - p.t) <= max_dt:
-                d = haversine_nm(p.lat, p.lon, q.lat, q.lon)
-                if d >= min_nm:
-                    return p, q, d
+        k = j
+        while k < len(b) and b[k].t <= p.t + max_dt:
+            q = b[k]
+            d = haversine_nm(p.lat, p.lon, q.lat, q.lon)
+            if d >= min_nm:
+                return p, q, d
+            k += 1
     return None
 
 
@@ -482,9 +526,17 @@ def ais_gaps(
     return [Signal("AIS_GAP", title, min(30, score), ev, SPARSE_TRACK_CAVEAT)]
 
 
+def connected(p: TrackPoint, q: TrackPoint, max_gap_h: float = 3.0) -> bool:
+    """Interpolation guard, not a claim of continuous observation."""
+    return p.segment == q.segment and timedelta(0) < q.t - p.t <= timedelta(hours=max_gap_h)
+
+
 def _runs(points: Sequence[TrackPoint], pred) -> List[List[TrackPoint]]:
     runs, cur = [], []
     for p in points:
+        if cur and not connected(cur[-1], p):
+            runs.append(cur)
+            cur = []
         if pred(p):
             cur.append(p)
         else:
@@ -577,7 +629,9 @@ def zigzag(
         if last_end and p.t < last_end:
             continue
         j = i
-        while j + 1 < len(pts) and (pts[j + 1].t - p.t) <= timedelta(hours=window_hours):
+        while (
+            j + 1 < len(pts) and connected(pts[j], pts[j + 1]) and (pts[j + 1].t - p.t) <= timedelta(hours=window_hours)
+        ):
             j += 1
         seg = pts[i : j + 1]
         if len(seg) < 4:
@@ -620,7 +674,7 @@ def cable_crossings(
     ev = []
     for p, q in zip(pts, pts[1:]):
         hours = (q.t - p.t).total_seconds() / 3600
-        if not 0 < hours <= max_gap_h:
+        if not connected(p, q, max_gap_h):
             continue
         rate = haversine_nm(p.lat, p.lon, q.lat, q.lon) / hours
         if rate > limit or (rate < 1.0 and max(p.speed, q.speed) < 1.0):

@@ -16,15 +16,22 @@ from .models import Identity, Report, Signal, TrackPoint
 
 
 def merge_lookup_identities(identities: List[Identity], lookups: Optional[Dict[str, List[Identity]]]) -> List[Identity]:
-    """Fold MMSI-search hits that are the *same* identity (same name, flag and
-    MMSI, just without IMO) into the identity list, widening its time span."""
+    """Add compatible name/flag/MMSI matches; preserve separate periods and foreign IMO claims."""
     if not lookups:
         return list(identities)
-    out = {i.key: replace(i) for i in identities}
+    out = {}
+    for i in identities:
+        _merge(out, replace(i))
     for others in lookups.values():
         for o in others:
-            if o.key in out:
-                _merge(out, replace(o))
+            candidates = [i for i in out.values() if i.key == o.key and not (i.imo and o.imo and i.imo != o.imo)]
+            imos = {i.imo for i in candidates if i.imo}
+            if not candidates or len(imos) > 1:
+                continue
+            overlaps = any(
+                i.start and i.end and o.start and o.end and i.start <= o.end and o.start <= i.end for i in candidates
+            )
+            _merge(out, replace(o, imo=next(iter(imos), o.imo)) if overlaps else replace(o))
     return sorted(out.values(), key=lambda i: i.start.timestamp() if i.start else 0)
 
 
@@ -45,13 +52,15 @@ def _merge_signals(groups: List[List]) -> List:
 
 
 def clip_identities(identities: List[Identity], as_of: datetime) -> List[Identity]:
-    """Only what was observable at ``as_of``: identities that had started, with
-    their last-seen date cut at ``as_of``."""
+    """Filter recorded timestamps, retaining current links and registry matches."""
     out = []
     for i in identities:
         if i.start and i.start > as_of:
             continue
-        out.append(replace(i, end=min(i.end, as_of) if i.end else i.end))
+        end = min(i.end, as_of) if i.end else None
+        if not i.start and i.end and i.end > as_of:
+            end = None  # no dated observation at or before the cut-off
+        out.append(replace(i, end=end))
     return out
 
 
@@ -100,6 +109,10 @@ def analyze(
     too (each separately, so two clones are never stitched into one path).
     ``parallel`` holds all identity tracks for the handover / parallel checks.
     """
+    if window and window[0] >= min(window[1], as_of or window[1]):
+        raise ValueError("Analysis window must start before its end/cut-off")
+    if excerpt_hours < 0:
+        raise ValueError("Excerpt hours must be non-negative")
     if as_of:
         if window:
             as_of = min(as_of, window[1])
@@ -165,6 +178,7 @@ def analyze(
         notes=notes,
         incident_time=incident_time,
         excerpt=excerpt,
+        excerpt_hours=excerpt_hours,
         as_of=as_of,
     )
 
@@ -188,8 +202,7 @@ def analyze_fixture(
     before_incident: bool = False,
     sanctions_list: Optional[dict] = None,
 ) -> Report:
-    """Re-run a reference case. ``before_incident`` limits the data to what GFW
-    had recorded up to the case's ``as_of`` time (start of the incident)."""
+    """Re-run a case, optionally filtering timestamps in the current snapshot."""
     identities = identities_from_entries(fixture["identities"])
     tracks = {k: [TrackPoint.from_row(r) for r in v["points"]] for k, v in fixture["tracks"].items()}
     lookups = {m: identities_from_entries(e, dedupe=False) for m, e in (fixture.get("mmsi_lookups") or {}).items()}
@@ -197,11 +210,13 @@ def analyze_fixture(
     for m in case.get("linked_mmsis", []):
         identities += [i for i in identities_from_entries(fixture["mmsi_lookups"][m]) if i.mmsi == m]
     labels = case.get("track_labels", {})
+    if len({labels.get(k, k) for k in tracks}) != len(tracks):
+        raise ValueError("Fixture track labels must be unique")
     parallel = {labels.get(k, k): tracks[k] for k in case.get("parallel", []) if k in tracks}
     fetched = {labels.get(k, k): (_day(v["start"]), _day(v["end"])) for k, v in fixture["tracks"].items()}
     primary = case["primary_track"]
     extra = {labels.get(k, k): tracks[k] for k in case.get("movement_tracks", []) if k != primary}
-    return analyze(
+    report = analyze(
         query=f"IMO {case['imo']}",
         identities=identities,
         track=tracks[primary],
@@ -216,3 +231,5 @@ def analyze_fixture(
         as_of=(case.get("as_of") or case["window"][1]) if before_incident else None,
         sanctions_list=sanctions_list,
     )
+    report.notes.extend(case.get("notes", []))
+    return report
