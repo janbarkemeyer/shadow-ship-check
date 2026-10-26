@@ -101,6 +101,8 @@ def analyze(
     ``parallel`` holds all identity tracks for the handover / parallel checks.
     """
     if as_of:
+        if window:
+            as_of = min(as_of, window[1])
         # pre-incident view: drop everything GFW recorded after ``as_of``
         identities = clip_identities(identities, as_of)
         mmsi_lookups = {m: clip_identities(v, as_of) for m, v in (mmsi_lookups or {}).items()}
@@ -140,6 +142,13 @@ def analyze(
     sigs.sort(key=lambda s: order.get(s.code, 99))
     total = sum(len(v) for v in movement.values())
     notes = [f"{n_window} track points inside the analysis window ({total} loaded, {len(movement)} identity track(s))."]
+    if not n_window:
+        notes.append("No positions inside the analysis window: movement findings are limited by missing data.")
+    if as_of:
+        notes.append(
+            "Timestamp filtering retains current identity links, registry matches and fixed 2025 flag weights; "
+            "it does not reconstruct what was known at the cut-off."
+        )
     if not cables:
         notes.append("No cable layer: cable crossings were not checked.")
     excerpt = []

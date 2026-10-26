@@ -24,7 +24,8 @@ DEFAULT_FIXTURES = Path(__file__).resolve().parents[2] / "data" / "fixtures"
 
 
 def _date(s: str) -> datetime:
-    return datetime.fromisoformat(s).replace(tzinfo=timezone.utc)
+    dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+    return dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
 def _cables(args):
@@ -63,15 +64,26 @@ def _label(i: Identity) -> str:
 
 
 def cmd_check(args) -> int:
+    try:
+        as_of = _date(args.as_of) if args.as_of else None
+        end = _date(args.end) if args.end else (as_of or datetime.now(timezone.utc))
+        if as_of:
+            end = min(end, as_of)
+            as_of = end
+        start = _date(args.start) if args.start else end - timedelta(days=30)
+        incident_time = _date(args.at) if args.at else None
+        if start >= end or args.context_days < 0:
+            raise ValueError("start must be before end/cut-off, and context-days must be non-negative")
+    except ValueError as exc:
+        print(f"Invalid date or analysis window: {exc}", file=sys.stderr)
+        return 2
+    pad = timedelta(days=args.context_days)
+    fetch_end = min(end + pad, as_of) if as_of else end + pad
     client = GFWClient()
     raw = _same_hull(identities_from_entries(client.search_raw(args.query), dedupe=False), args.query)
     if not raw:
         print(f"No vessel found for {args.query!r} (search by IMO or MMSI for exact matches).", file=sys.stderr)
         return 1
-    end = _date(args.end) if args.end else datetime.now(timezone.utc)
-    start = _date(args.start) if args.start else end - timedelta(days=30)
-    pad = timedelta(days=args.context_days)
-
     # MMSI look-ups: reuse by other ships, and IMO-less copies of the hull's identities
     lookups = {}
     if not args.no_mmsi_lookup:
@@ -98,16 +110,16 @@ def cmd_check(args) -> int:
         hits = [
             i
             for i in identities_from_entries(client.search_raw(q), dedupe=False)
-            if q in (i.mmsi, i.imo) or i.key[0] == q.upper().replace(" ", "")
+            if q in (i.mmsi, i.imo) or i.key[0] == normalize_name(q)
         ]
         linked += hits
         gfw_ids.update({i.vessel_id: i for i in hits if i.vessel_id})
 
     tracks = {}
     for vid, ident in gfw_ids.items():
-        if not ident.end or ident.end < start - pad or (ident.start and ident.start > end + pad):
+        if not ident.end or ident.end < start - pad or (ident.start and ident.start > fetch_end):
             continue
-        pts = client.track(vid, start - pad, end + pad)
+        pts = client.track(vid, start - pad, fetch_end)
         if pts:
             tracks.setdefault(_label(ident), []).extend(pts)
     for v in tracks.values():
@@ -117,7 +129,7 @@ def cmd_check(args) -> int:
     in_win = {k: sum(1 for p in v if start <= p.t <= end) for k, v in tracks.items()}
     primary = max(in_win, key=in_win.get) if tracks else ""
     extra = {k: v for k, v in tracks.items() if k != primary and in_win[k]}
-    fetched = {k: (start - pad, end + pad) for k in tracks}
+    fetched = {k: (start - pad, fetch_end) for k in tracks}
 
     cables = _cables(args)
     report = analyze(
@@ -128,11 +140,11 @@ def cmd_check(args) -> int:
         mmsi_lookups=lookups,
         parallel=tracks if len(tracks) > 1 else None,
         cables=cables,
-        incident_time=_date(args.at) if args.at else None,
+        incident_time=incident_time,
         fetched=fetched,
         primary_label=primary if extra else "",
         extra_tracks=extra,
-        as_of=_date(args.as_of) if args.as_of else None,
+        as_of=as_of,
         sanctions_list=_sanctions(args),
     )
     _emit(report, args)
@@ -200,7 +212,7 @@ def _cable_args(p) -> None:
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(
-        prog="ssc", description="Check ships for camouflage patterns seen before subsea cable incidents."
+        prog="ssc", description="Inspect AIS identity changes and tracks around reported subsea cable incidents."
     )
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -215,7 +227,9 @@ def main(argv=None) -> int:
     c.add_argument("--end", help="window end, YYYY-MM-DD (default: now)")
     c.add_argument("--context-days", type=int, default=3, help="extra days of track loaded around the window")
     c.add_argument("--at", help="incident time (UTC, e.g. 2025-02-24T19:00) - prints the track +/- 3 h")
-    c.add_argument("--as-of", help="ignore everything GFW recorded after this time (UTC) - a pre-incident view")
+    c.add_argument(
+        "--as-of", help="filter timestamps at this UTC time; current identity links and registry matches remain"
+    )
     _cable_args(c)
     c.add_argument("--no-mmsi-lookup", action="store_true", help="skip the extra search for MMSI reuse")
     c.add_argument(
@@ -237,7 +251,7 @@ def main(argv=None) -> int:
     k.add_argument(
         "--before-incident",
         action="store_true",
-        help="use only data GFW had recorded before the incident (the case's 'as_of' time)",
+        help="filter timestamps at the case's 'as_of' time; current identity links and registry matches remain",
     )
     k.set_defaults(func=cmd_case)
 

@@ -42,3 +42,14 @@ def test_parse_ts_fractional_seconds():
     assert parse_ts("2023-07-22T10:15:56Z") == datetime(2023, 7, 22, 10, 15, 56, tzinfo=timezone.utc)
     assert parse_ts("2024-01-01T00:00:00.1234567Z").microsecond == 123456
     assert parse_ts(None) is None
+
+
+def test_missing_mmsi_is_not_registry_confirmation():
+    entries = [
+        {
+            "selfReportedInfo": [{"shipname": "SHIP", "imo": "9000001"}],
+            "registryInfo": [{"shipname": "OTHER", "imo": "9000002"}],
+        }
+    ]
+    ais = next(i for i in identities_from_entries(entries) if i.source == "ais")
+    assert not ais.registry_confirmed

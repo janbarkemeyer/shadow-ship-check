@@ -9,7 +9,8 @@ Each record in the evaluation file holds the raw GFW identity search results for
   the UK list, each with a reference date drawn from the positives' designation dates.
 
 Only the identity checks run (there is no track). The ``SANCTIONED`` watchlist check is off -
-otherwise the test would be circular. The rules were not tuned on this data.
+otherwise the test would be circular. NAME_ON_OTHER_MMSI was revised after
+inspecting sanctioned vessels; this is not an untouched validation set.
 """
 
 from __future__ import annotations
@@ -37,7 +38,8 @@ def load(path: Path = BUNDLED) -> dict:
 
 
 def _ref(s: str) -> datetime:
-    return datetime.fromisoformat(s).replace(tzinfo=timezone.utc)
+    dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+    return dt.astimezone(timezone.utc) if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
 def score_record(rec: dict) -> Tuple[int, Dict[str, int]]:
@@ -49,9 +51,10 @@ def score_record(rec: dict) -> Tuple[int, Dict[str, int]]:
         for m, e in (rec.get("mmsi_lookups") or {}).items()
     }
     # name look-ups: the hull's names broadcast under MMSIs that were not looked up directly
+    direct_mmsis = set(lookups)
     for name, entries in (rec.get("name_lookups") or {}).items():
         for i in identities_from_entries(entries, dedupe=False):
-            if i.mmsi and i.mmsi not in lookups and i.key[0] == normalize_name(name):
+            if i.mmsi and i.mmsi not in direct_mmsis and i.key[0] == normalize_name(name):
                 lookups.setdefault(i.mmsi, []).append(i)
     lookups = {m: clip_identities(v, ref) for m, v in lookups.items()}
     _, sigs = identity_signals(identities, lookups, ref, sanctions_list=None)

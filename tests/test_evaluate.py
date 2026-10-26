@@ -62,3 +62,21 @@ def test_bundled_evaluation_set():
     assert r["n"] == {"sanctioned": 300, "control": 300}
     assert r["auc"] > 0.75
     assert r["levels"]["HIGH"]["sanctioned_flagged"] > 4 * r["levels"]["HIGH"]["controls_flagged"]
+
+
+def test_name_lookup_keeps_all_rows_for_a_new_mmsi():
+    own = _info("A", "PLW", "511000001", "9000001", "2024-01-01T00:00:00Z", "2025-06-01T00:00:00Z")
+    other = _info("A", "PLW", "511000002", "9000002", "2024-01-01T00:00:00Z", "2025-06-01T00:00:00Z")
+    missing_imo = {**other, "imo": None}
+    rec = _record("sanctioned", [own])
+    rec["name_lookups"] = {"A": [{"selfReportedInfo": [other, missing_imo]}]}
+    score, points = evaluate.score_record(rec)
+    assert points["NAME_ON_OTHER_MMSI"] == 15
+    rec["name_lookups"]["A"][0]["selfReportedInfo"].reverse()
+    assert evaluate.score_record(rec) == (score, points)
+
+
+def test_evaluation_reference_converts_timezone():
+    from datetime import datetime, timezone
+
+    assert evaluate._ref("2025-01-02T20:00+08:00") == datetime(2025, 1, 2, 12, tzinfo=timezone.utc)

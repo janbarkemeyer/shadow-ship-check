@@ -114,16 +114,21 @@ def eval_block() -> str:
         for c, v in r["signals"].items()
     )
     return f"""
-<h2>Out-of-sample test</h2>
-<p>{r["n"]["sanctioned"]} vessels sanctioned by the UK for shipping Russian oil, scored on their identity history
-<em>as it stood on the day they were designated</em>, against {r["n"]["control"]} random ships of similar age. Only the
-identity checks run, the sanctions check is switched off, and no rule was tuned on this data.</p>
+<h2>UK-sanctioned vessels and sampled controls</h2>
+<p>{r["n"]["sanctioned"]} vessels designated under the UK Russia sanctions regime, compared with
+{r["n"]["control"]} sampled valid IMO numbers with a similar prefix distribution. Identity timestamps are filtered
+at each reference date; current links and registry matches remain. Only identity checks run, with sanctions
+points switched off. One rule was revised while preparing the sanctioned sample, so this is not an untouched
+validation set. The comparison measures separation of these groups, not prediction of cable incidents.</p>
 <div class="stats">{"".join(f"<div class=stat><b>{a}</b><span>{esc(b)}</span></div>" for a, b in stats)}</div>
 <img class="fig" src="img/evaluation.png" alt="Score distribution of sanctioned vessels and random ships">
 <div class="wrap"><table><thead><tr><th>Signal</th><th class="num">sanctioned</th><th class="num">random ships</th></tr></thead>
 <tbody>{rows}</tbody></table></div>
 <p class="cap">Share of ships in each group with the signal. Details and caveats:
 <a href="{REPO}/blob/main/docs/evaluation.md">docs/evaluation.md</a>.</p>
+<p>The 8 % HIGH share applies to these 300 controls, not the world fleet or false alarms for cable incidents.
+Flag and registry signals alone reach almost the same AUC as the combined score. The bootstrap interval does
+not include sampling bias, uncertain labels or hindsight in the source data.</p>
 """
 
 
@@ -131,36 +136,40 @@ def page() -> str:
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Shadow Ship Check</title>
-<meta name="description" content="Checks a ship's AIS history for the camouflage patterns seen before subsea cable incidents.">
+<meta name="description" content="Inspect AIS identity changes and tracks around reported subsea cable incidents.">
 <style>{CSS}</style></head><body><main>
 <h1>Shadow Ship Check</h1>
-<p class="lead">Checks a ship's AIS history for the camouflage patterns seen before subsea cable incidents in Taiwan
-and the Baltic Sea – changing names, flag hopping, borrowed MMSIs, identity swaps at sea, and slow crossings of
-cable routes.</p>
-<p>Since 2023, cables and a gas pipeline around Taiwan and in the Baltic Sea have repeatedly been damaged by ships
-dragging their anchors. Several of the suspected ships had changed name and flag shortly before and broadcast
-inconsistent AIS data. Shadow Ship Check turns those patterns into transparent, tested rules and runs them on free
-data from Global Fishing Watch. <a href="{REPO}">Code and documentation on GitHub</a>.</p>
-<p class="note">The output is a list of indicators with evidence, for a human analyst. A high score is not evidence
-of sabotage. Most incidents here are officially unresolved and are described as <em>suspected</em>.</p>
+<p class="lead">I use this Python CLI to examine changes in ships' AIS identities and their tracks around reported
+subsea cable incidents in Taiwan and the Baltic Sea.</p>
+<p>I am a politics and economics student based in Taipei. I built Shadow Ship Check to investigate identity changes
+reported around cable incidents. It runs explicit rules on data from Global Fishing Watch and lists the records
+behind each result. <a href="{REPO}">Code and documentation on GitHub</a>.</p>
+<p>The results help prioritise research into a known ship or identity cluster. They do not establish intent,
+responsibility for damage or a probability of a future incident. HIGH means several rules fired; LOW can also
+reflect limited data.</p>
 
 <img class="fig" src="img/xingshun39_handover.png" alt="Map of two AIS identities of Xingshun 39 north of Keelung">
-<p class="cap">Xingshun 39 broadcast as two ships: a Tanzania identity with IMO number and a Cameroon identity
-without one. Searching by IMO alone shows only the first.</p>
+<p class="cap">The Xingshun 39 case links a Tanzania identity with an IMO number and a Cameroon identity without
+one. Their tracks show a possible handover at sea. Searching GFW by IMO alone misses the second identity;
+this case links it manually by name and track evidence.</p>
 
 <h2>Reference incidents</h2>
-<p>Each case is scored twice: with only the data Global Fishing Watch had recorded <em>before the incident</em>, and
-with all data available today.</p>
+<p>Each case is scored twice: with a timestamp cut-off before the incident, and with the full bundled snapshot.
+Current identity links, registry matches and manual associations remain. Flag weights use the 2025 Paris MoU list,
+published in July 2026. These are retrospective comparisons, not demonstrated advance warnings. One sale can
+trigger several signals, and movement checks have no independent validation. See the
+<a href="{REPO}/blob/main/docs/methodology.md">methodology</a> for thresholds and limitations.</p>
 {cases_table()}
 <img class="fig" src="img/yipeng3_cables.png" alt="Yi Peng 3 track crossing two Baltic cables at reduced speed">
-<p class="cap">Yi Peng 3 shows no identity camouflage, but its track crosses both damaged cables at reduced speed
-around the reported failure times.</p>
+<p class="cap">Yi Peng 3 has no scored recent identity changes. Straight-line track segments cross both cable
+routes within intervals containing the reported failure times. Only the C-Lion1 crossing meets the scoring
+threshold; these reconstructed crossings do not establish anchor use or responsibility.</p>
 {eval_block()}
 <h2>Try it</h2>
 <pre>git clone {REPO} && cd shadow-ship-check
 pip install -e .
 ssc case all                 # reference cases, offline
-ssc eval                     # out-of-sample test, offline
+ssc eval                     # sanctioned-vessel comparison, offline
 ssc check 9224984 --start 2024-11-16 --end 2024-11-19   # any ship, live from GFW</pre>
 <footer>Vessel data © Global Fishing Watch (CC BY-NC 4.0) · cable routes © OpenStreetMap contributors (ODbL) ·
 sanctions: UK Sanctions List (OGL v3) via OpenSanctions (CC BY-NC 4.0) · land: Natural Earth · code: MIT ·

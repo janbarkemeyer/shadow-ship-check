@@ -111,7 +111,7 @@ def fig_xingshun(polys):
     last_b = [x for x in b if x.t <= utc(2025, 1, 3, 9)][-1]
     ax.scatter([off.lon], [off.lat], s=30, color=C1, zorder=5, edgecolor="white")
     ax.annotate(
-        "XINGSHUN39 goes silent\n28 Dec 22:11 UTC",
+        "XINGSHUN39: last GFW position\nbefore gap, 28 Dec 22:11 UTC",
         (off.lon, off.lat),
         (121.84, 25.08),
         fontsize=8,
@@ -120,7 +120,7 @@ def fig_xingshun(polys):
     )
     ax.scatter([last_b.lon], [last_b.lat], s=46, facecolor="none", edgecolor=INK, lw=1.2, zorder=6)
     ax.annotate(
-        "Handover: SHUNXING39 last position 08:19 UTC,\nXINGSHUN39 back at 08:52 UTC, 0.2 nm away (3 Jan)",
+        "Possible handover: last SHUNXING39 position 08:19 UTC,\nXINGSHUN39 recorded 08:52 UTC, 0.2 nm away (3 Jan)",
         (last_b.lon, last_b.lat),
         (121.48, 25.55),
         fontsize=8,
@@ -128,9 +128,7 @@ def fig_xingshun(polys):
         arrowprops=dict(arrowstyle="-", color=MUTED, lw=0.8),
     )
     ax.text(121.505, 25.135, "Keelung", fontsize=8, color=MUTED)
-    ax.set_title(
-        "Xingshun 39: two AIS identities, one ship (28 Dec 2024 – 4 Jan 2025)", fontsize=10, color=INK, loc="left"
-    )
+    ax.set_title("Xingshun 39: linked AIS identities (28 Dec 2024 – 4 Jan 2025)", fontsize=10, color=INK, loc="left")
     ax.legend(loc="upper left", fontsize=7.5, frameon=False)
     ax.plot([], [], color=INK, lw=1.1, label="telecom cable, unnamed in OpenStreetMap")
     ax.legend(loc="upper left", fontsize=7.5, frameon=False)
@@ -183,7 +181,7 @@ def fig_yipeng(polys):
                 ax.annotate(
                     text, mid, xy, fontsize=7.5, color=INK, arrowprops=dict(arrowstyle="-", color=MUTED, lw=0.8)
                 )
-    ax.plot([], [], color=C1, lw=1.8, label=f"normal speed (median {ref:.1f} kn)")
+    ax.plot([], [], color=C1, lw=1.8, label=f"> 70 % of median speed ({ref:.1f} kn)")
     ax.plot([], [], color=C2, lw=1.8, label="<= 70 % of median speed (over ground)")
     ax.plot([], [], color=INK, lw=1.1, label="damaged cables (OpenStreetMap)")
     ax.plot([], [], color="#b8c0c8", lw=0.6, label="other cables and pipelines")
@@ -266,7 +264,7 @@ def fig_evaluation():
     for sp in ("top", "right"):
         ax.spines[sp].set_visible(False)
     ax.legend(fontsize=7.5, frameon=False, loc="upper right", bbox_to_anchor=(1.0, 0.86))
-    ax.set_title("Identity score: sanctioned shadow-fleet ships vs. random ships", fontsize=9.5, color=INK, loc="left")
+    ax.set_title("Identity score: UK-sanctioned ships vs. sampled controls", fontsize=9.5, color=INK, loc="left")
     fig.text(0.01, 0.01, "Data: Global Fishing Watch (CC BY-NC 4.0); UK Sanctions List via OpenSanctions",
              fontsize=6, color=MUTED)  # fmt: skip
     fig.tight_layout()

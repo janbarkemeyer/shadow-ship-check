@@ -140,12 +140,15 @@ def registry_confirmation(
         return [
             Signal(
                 code="REGISTRY_LOST",
-                title="Registry confirmation lost - identity in use is self-reported only",
+                title="Selected AIS identity has no registry match in GFW; an earlier identity did",
                 points=15 if recent else 5,
                 evidence=[f"last confirmed: {last.label()}", f"in use at {ref:%Y-%m-%d}: {current.label()}"],
-                caveat=None
-                if recent
-                else f"Confirmation was lost more than {lookback_years} years before the reference date.",
+                caveat="GFW registry coverage is incomplete; a missing match does not establish invalid registration."
+                + (
+                    ""
+                    if recent
+                    else f" The last match ended more than {lookback_years} years before the reference date."
+                ),
             )
         ]
     return [
@@ -154,7 +157,8 @@ def registry_confirmation(
             title="No identity of this hull is confirmed by a registry in GFW",
             points=10,
             evidence=[f"in use at {ref:%Y-%m-%d}: {current.label()}"],
-            caveat="Logged-in GFW users see 11 additional registry sources.",
+            caveat="GFW registry coverage varies by flag and access level; "
+            "a missing match is not proof of non-registration.",
         )
     ]
 
@@ -198,7 +202,7 @@ def mmsi_reuse(
             title=f"MMSI shared with other vessels ({len(close)} within {near_years} years, {len(far)} older)",
             points=15 if close else 5,
             evidence=ev,
-            caveat="Small registries sometimes recycle MMSIs; use close in time is the strong signal.",
+            caveat="Legitimate MMSI reassignment and errors in identity linking are possible.",
         )
     ]
 
@@ -214,20 +218,22 @@ def name_on_other_mmsi(identities: Sequence[Identity], lookups: Optional[Dict[st
         return []
     own_mmsis = {i.mmsi for i in identities if i.mmsi}
     own_imos = {i.imo for i in identities if i.imo}
-    usage: Dict[str, Tuple[datetime, datetime, set]] = {}
+    usage: Dict[str, List[Identity]] = {}
     for i in identities:
         if i.key[0] and i.start and i.end:
-            a, b, flags = usage.get(i.key[0], (i.start, i.end, set()))
-            usage[i.key[0]] = (min(a, i.start), max(b, i.end), flags | {i.flag})
+            usage.setdefault(i.key[0], []).append(i)
     seen, ev = set(), []
     for found in lookups.values():
         for o in found:
             if not (o.key[0] in usage and o.mmsi and o.mmsi not in own_mmsis and o.key not in seen):
                 continue
-            a, b, flags = usage[o.key[0]]
-            if (o.imo and o.imo not in own_imos) or o.flag not in flags:
+            if o.imo and o.imo not in own_imos:
                 continue
-            if not (o.start and o.end and o.start <= b and o.end >= a):
+            if not (
+                o.start
+                and o.end
+                and any(i.flag == o.flag and o.start <= i.end and o.end >= i.start for i in usage[o.key[0]])
+            ):
                 continue
             seen.add(o.key)
             owners = sorted(
@@ -239,7 +245,7 @@ def name_on_other_mmsi(identities: Sequence[Identity], lookups: Optional[Dict[st
     return [
         Signal(
             "NAME_ON_OTHER_MMSI",
-            "Hull's name broadcast under other ships' MMSIs",
+            "Known name reported under an additional MMSI",
             15,
             ev,
             "Short episodes can also be typing errors in the AIS set-up; repeated use is the signal.",
@@ -266,7 +272,7 @@ def imo_hidden(identities: Sequence[Identity], lookups: Optional[Dict[str, List[
             "Identity also used without its IMO number",
             10,
             ev,
-            "Without an IMO the AIS identity is not tied to the hull's history.",
+            "A missing IMO can reflect incomplete AIS configuration; it does not establish deliberate concealment.",
         )
     ]
 
@@ -294,12 +300,12 @@ def concurrent_identities(
             if (hi - lo) < timedelta(days=min_overlap_days):
                 continue
             same = a.key[0] == b.key[0] and a.flag == b.flag
-            recent = hi >= lo_limit and lo <= ref + YEAR
+            recent = min(hi, ref) - max(lo, lo_limit) >= timedelta(days=min_overlap_days)
             line = f"{lo:%Y-%m-%d} - {hi:%Y-%m-%d}: {a.name}/{a.flag}/{a.mmsi} and {b.name}/{b.flag}/{b.mmsi}"
             if same:
                 line += "  (same name and flag - likely a second transponder)"
             if not recent:
-                line += "  (outside look-back, not scored)"
+                line += f"  (less than {min_overlap_days:g} days inside the scoring period, not scored)"
             else:
                 score += 5 if same else 20
             ev.append(line)
@@ -308,7 +314,7 @@ def concurrent_identities(
     return [
         Signal(
             code="CONCURRENT_IDENTITIES",
-            title="Two identities of the same hull in use at the same time",
+            title="Overlapping first/last dates for linked AIS identities",
             points=min(20, score),
             evidence=ev,
             caveat="Overlap is computed from first/last AIS message per identity; check the tracks "
@@ -367,9 +373,11 @@ def identity_handover(
     return [
         Signal(
             code="IDENTITY_HANDOVER",
-            title="Identity swap at sea (one AIS identity stops, another starts nearby)",
+            title="Possible identity handover (one AIS track stops, another starts nearby)",
             points=20,
             evidence=sorted(set(ev)),
+            caveat="A reachable position is not proof of the same hull. Coverage gaps, ports and incorrect links "
+            "can produce similar candidates.",
         )
     ]
 
@@ -396,7 +404,7 @@ def parallel_tracks(
     return [
         Signal(
             code="PARALLEL_TRACKS",
-            title="Identities of the same hull broadcast from two places at once",
+            title="Linked identities report distant positions within one hour",
             points=20,
             evidence=ev,
             caveat="Either two hulls share identity data (spoofing / cloning) or GFW linked identities wrongly.",
@@ -453,7 +461,7 @@ def ais_gaps(
         covering = {k: n for k, n in covering.items() if n}
         if covering:
             who = ", ".join(f"{k} ({n} positions)" for k, n in covering.items())
-            ev.append(line + f"  - meanwhile broadcasting as {who}; scored under IDENTITY_HANDOVER")
+            ev.append(line + f"; meanwhile GFW records linked track(s): {who}; no additional gap points")
             continue
         score += 10 if h >= 24 else 5
         if covers:
@@ -632,8 +640,8 @@ def cable_crossings(
             "Crossed a mapped cable or pipeline at reduced speed",
             20,
             ev,
-            "Cable routes from OpenStreetMap: approximate and incomplete. Ships cross cables all the time; "
-            "only slow crossings are listed.",
+            "Straight-line crossings reconstructed between sparse positions. OpenStreetMap routes are approximate "
+            "and incomplete. This does not establish contact with a cable, anchor use or intent.",
         )
     ]
 

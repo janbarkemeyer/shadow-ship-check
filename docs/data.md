@@ -2,18 +2,19 @@
 
 ## Source
 
-All vessel data comes from [Global Fishing Watch](https://globalfishingwatch.org) (GFW), which publishes
-AIS-derived vessel identities and tracks for free.
+All vessel data comes from [Global Fishing Watch](https://globalfishingwatch.org) (GFW). The bundled
+snapshots contain AIS-derived identities and simplified tracks collected on 26 Oct 2026.
 
 | What | Endpoint | Access |
 |---|---|---|
-| Vessel identities | `GET /v3/vessels/search?query=…&datasets[0]=public-global-vessel-identity:v5.0` | public |
-| Tracks | `GET /v3/vessels/{id}/tracks?dataset=public-global-all-tracks:v4.0&format=VALUE_ARRAY&binary=true&…` | public, simplified; the same request the GFW map makes |
+| Vessel identities | `GET /v3/vessels/search?query=…&datasets[0]=public-global-vessel-identity:v5.0` | snapshot collected without a token |
+| Tracks | `GET /v3/vessels/{id}/tracks?dataset=public-global-all-tracks:v4.0&format=VALUE_ARRAY&binary=true&…` | simplified map tracks; snapshot collected without a token |
 
 Base URL: `https://gateway.api.globalfishingwatch.org`. The track endpoint is not part of GFW's
-documented public API and may change without notice. Tracks in other formats (JSON, GeoJSON) require
-download permissions. An API token (`GFW_API_TOKEN`) is optional; GFW issues them free of charge for
-non-commercial use.
+documented public API and may change without notice. Access to these map requests is not guaranteed.
+The client supports `GFW_API_TOKEN`; a token does not guarantee higher-resolution tracks or access
+to every dataset. For supported access and current conditions, see the
+[GFW API documentation](https://api-doc.globalfishingwatch.org/our-apis/documentation/).
 
 ### Binary track format
 
@@ -31,22 +32,27 @@ The offsets are indices into the value list where each track segment starts. The
 
 A GFW search result can carry `selfReportedInfo` (what the ship broadcasts in AIS) and `registryInfo`
 (matching records from public registries such as IMO or regional fishery bodies). An AIS identity is
-treated as registry-confirmed when the same GFW entry holds a registry record with the same MMSI.
-Logged-out users see fewer registry sources than logged-in users (GFW: "11 sources won't appear
-unless you log in"), so `NO_REGISTRY` may be a coverage artefact.
+treated as registry-confirmed when the same GFW entry holds a registry record with the same
+non-empty MMSI. This is a match in the available data, not an independent verification of the hull,
+flag or legal registration. GFW documents uneven registry coverage by flag and vessel size in its
+[vessel identity caveats](https://globalfishingwatch.org/datasets-and-code-vessel-identity/).
+`NO_REGISTRY` and `REGISTRY_LOST` can therefore reflect coverage rather than a change in legal status.
 
 ## Known limitations
 
-* **Simplified tracks.** On open water the public track often has one point every 60–90 minutes;
+* Simplified tracks. On open water the public track often has one point every 60–90 minutes;
   near the coast it is denser. Short manoeuvres disappear, and gaps of an hour or two mean little.
-* **Coverage gaps are not AIS switch-offs.** GFW has no Eagle S positions from 11 Dec 2024 to 7 Mar
+* Coverage gaps are not AIS switch-offs. GFW has no Eagle S positions from 11 Dec 2024 to 7 Mar
   2025, although other providers recorded the ship crossing Estlink 2. Treat `AIS_GAP` as "this
   source has no data", then check a second source.
-* **Identity linking is GFW's.** GFW decides which AIS identities belong to an IMO. Identities that
+* Identity linking is GFW's. GFW decides which AIS identities belong to an IMO. Identities that
   broadcast no IMO (e.g. SHUNXING39) are only found by searching names and MMSIs; the CLI searches
   the hull's MMSIs and recent names automatically, and `--also` links others by hand.
-* **First/last message dates** of an identity overstate how long it was really in use.
-* **Cable routes are approximate.** OpenStreetMap routes are drawn from nautical charts and
+* First/last message dates of an identity overstate how long it was really in use.
+* Historical timestamp filtering retains current identity links, registry matches and manually
+  associated identities. The fixed Paris MoU 2025 list was published in July 2026, after the case
+  incidents. These snapshots do not reconstruct the information available before an incident.
+* Cable routes are approximate. OpenStreetMap routes are drawn from nautical charts and
   notices, often simplified, and many cables are missing (the Taiwan layer has no named
   trans-Pacific cables; TPKM-3 is not mapped). A slow crossing of a *mapped* route is evidence
   worth checking; the absence of one means little.
@@ -68,10 +74,15 @@ passing about 14 nm north of Keelung (Taiwan). Use `--cables FILE_OR_DIR` for ot
 
 ## Sanctions list
 
-`data/sanctions/uk_vessels.csv` lists the 683 vessels designated under UK sanctions regimes (645 under the
-Russia regime) with IMO, name, flag, type and designation date, as of 26 Oct 2026. Source: the UK
-Sanctions List (FCDO, Open Government Licence v3.0), via the OpenSanctions dataset `gb_fcdo_sanctions`
-(CC BY-NC 4.0). The `SANCTIONED` check only counts designations made before the reference date.
+`data/sanctions/uk_vessels.csv` contains 683 vessel records designated under UK sanctions regimes
+(645 under the Russia regime), in the bundled 26 Oct 2026 snapshot. Of these, 682 have an IMO number;
+the remaining record cannot match this tool's IMO-based check. Names, flags, types and designation
+dates are included where available.
+Sources: the [UK Sanctions List](https://www.gov.uk/government/publications/the-uk-sanctions-list)
+(FCDO, Open Government Licence v3.0), via the OpenSanctions dataset `gb_fcdo_sanctions`
+([CC BY-NC 4.0](https://www.opensanctions.org/docs/commercial/exemption/)). The `SANCTIONED` check only
+scores designations dated on or before the reference date. Date-only records are treated as 00:00
+UTC. The file is a snapshot and does not automatically reflect later listings or delistings.
 
 ## Evaluation set
 
@@ -83,10 +94,12 @@ look-ups) for the sanctioned and control vessels used in [evaluation.md](evaluat
 
 `data/fixtures/*.json` hold snapshots of the GFW data used in the case files and tests (identities,
 MMSI look-ups and tracks for fixed time windows). They were collected on 26 Oct 2026 through the GFW
-web map's public API without logging in. `python scripts/refresh_fixtures.py` downloads them again.
+web map's endpoints without logging in. `python scripts/refresh_fixtures.py` requests the configured
+tracks again and overwrites the fixture files. It does not reproduce the original data state or
+automatically discover all relevant identities; queries and track identifiers are fixed in the script.
 
 ## Licence
 
-GFW data is published under **CC BY-NC 4.0**: credit Global Fishing Watch and do not use it
+GFW data is published under CC BY-NC 4.0: credit Global Fishing Watch and do not use it
 commercially without an agreement with GFW. The project code is MIT-licensed; the fixtures inherit
 GFW's licence; the cable layer is ODbL.

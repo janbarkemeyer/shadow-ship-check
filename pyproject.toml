@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "shadow-ship-check"
 version = "0.2.0"
-description = "Check ships for the camouflage patterns (identity changes, flag hopping, borrowed MMSIs, slow cable crossings) seen before subsea cable incidents in Taiwan and the Baltic Sea."
+description = "Inspect AIS identity changes and tracks around reported subsea cable incidents in Taiwan and the Baltic Sea."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }

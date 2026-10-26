@@ -21,5 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ---------------------------------------------------------------------------
-The MIT licence covers the code only. Vessel data in data/fixtures comes from
-Global Fishing Watch and is licensed CC BY-NC 4.0 (attribution, non-commercial).
+The MIT licence covers the code only. Vessel data in data/fixtures and data/eval
+comes from Global Fishing Watch (CC BY-NC 4.0). Routes in data/cables are derived
+from OpenStreetMap (ODbL 1.0). The UK sanctions snapshot comes from FCDO (OGL v3.0)
+via OpenSanctions (CC BY-NC 4.0). Land outlines in docs/img come from Natural Earth
+(public domain). See docs/data.md and data/README.md for sources and attribution.

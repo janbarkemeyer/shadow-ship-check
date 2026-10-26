@@ -4,20 +4,20 @@ Case file with context and sources: [newnew_polar_bear.md](../cases/newnew_polar
 
 | | Score | Identity | Flag & registry | Behaviour |
 |---|---|---|---|---|
-| Before the incident | **30 MEDIUM** | 10 | 20 | 0 |
-| Full data | **35 MEDIUM** | 10 | 25 | 0 |
+| Before the incident | 30 MEDIUM | 10 | 20 | 0 |
+| Full data | 35 MEDIUM | 10 | 25 | 0 |
 
 Pre-incident data cut-off: 2023-10-07 20:00 UTC.  
 Analysis window: 2023-10-07 12:00 - 2023-10-08 06:00 UTC.  
-_Indicators only - not evidence of sabotage or any other wrongdoing. Data: Global Fishing Watch (CC BY-NC 4.0)._
+_Research indicators only. The score is not a probability or evidence of intent or responsibility for damage. LOW may reflect limited data. Data: Global Fishing Watch (CC BY-NC 4.0)._
 
 ## Before the incident
 
-What the checks flag using only data recorded before the cut-off:
+Retrospective timestamp filter of the bundled snapshot. Current identity links, registry matches, manual associations and fixed 2025 flag weights remain; this does not reconstruct an advance warning.
 
-- **Registry confirmation lost - identity in use is self-reported only** (+15): last confirmed: BALTIC FULMAR / CYP / MMSI 210925000 (2017-04-28 - 2023-06-20, registry + AIS)
-- **5 identities linked to the same hull (2 in the 5 years before 2023-10-07)** (+10):   REINBEK / LBR / MMSI 636091998 (2012-01-03 - 2014-03-13, self-reported AIS only)
-- **4 flag change(s)** (+5): 2014-03-13: LBR -> MLT (Paris MoU white, ITF flag of convenience)  [REINBEK -> REINBEK]
+- Selected AIS identity has no registry match in GFW; an earlier identity did (+15): last confirmed: BALTIC FULMAR / CYP / MMSI 210925000 (2017-04-28 - 2023-06-20, registry + AIS)
+- 5 identities linked to the same hull (2 in the 5 years before 2023-10-07) (+10):   REINBEK / LBR / MMSI 636091998 (2012-01-03 - 2014-03-13, self-reported AIS only)
+- 4 flag change(s) (+5): 2014-03-13: LBR -> MLT (Paris MoU white, ITF flag of convenience)  [REINBEK -> REINBEK]
 
 ## Full data
 
@@ -36,7 +36,7 @@ What the checks flag using only data recorded before the cut-off:
 
 #### Identity (+10)
 
-**6 identities linked to the same hull (2 in the 5 years before 2023-10-08)** `MULTI_IDENTITY` +10
+##### 6 identities linked to the same hull (2 in the 5 years before 2023-10-08) (`MULTI_IDENTITY`, +10)
 
 -   REINBEK / LBR / MMSI 636091998 (2012-01-03 - 2014-03-13, self-reported AIS only)
 -   REINBEK / MLT / MMSI 229739000 (2014-03-13 - 2016-03-07, self-reported AIS only)
@@ -45,11 +45,11 @@ What the checks flag using only data recorded before the cut-off:
 - * NEWNEW POLAR BEAR / HKG / MMSI 477893800 (2023-06-20 - 2025-03-11, self-reported AIS only)
 -   BELLE ARIES / PAN / MMSI 352005308 (2025-03-11 - 2026-10-23, self-reported AIS only)
 
-> * = in use during the look-back period (scored); others are history.
+* = in use during the look-back period (scored); others are history.
 
 #### Flag & registry (+25)
 
-**5 flag change(s)** `FLAG_CHANGE` +10
+##### 5 flag change(s) (`FLAG_CHANGE`, +10)
 
 - 2014-03-13: LBR -> MLT (Paris MoU white, ITF flag of convenience)  [REINBEK -> REINBEK]
 - 2016-03-07: MLT -> LBR (Paris MoU white, ITF flag of convenience)  [REINBEK -> REINBEK]
@@ -57,12 +57,14 @@ What the checks flag using only data recorded before the cut-off:
 - 2023-06-20: CYP -> HKG (Paris MoU white)  [BALTIC FULMAR -> NEWNEW POLAR BEAR]  (recent)
 - 2025-03-11: HKG -> PAN (Paris MoU white, ITF flag of convenience)  [NEWNEW POLAR BEAR -> BELLE ARIES]  (after reference date)
 
-> Scored: changes in the 3 years before 2023-10-08 by the new flag's Paris MoU rating (black +15, grey +10, white +5; unlisted +10 if an ITF flag of convenience, else +5) and changes after it (+5). Sales also cause flag changes; most of the world fleet sails under white-listed open registries.
+Scored: changes in the 3 years before 2023-10-08 by the new flag's Paris MoU rating (black +15, grey +10, white +5; unlisted +10 if an ITF flag of convenience, else +5) and changes after it (+5). Sales also cause flag changes; most of the world fleet sails under white-listed open registries.
 
-**Registry confirmation lost - identity in use is self-reported only** `REGISTRY_LOST` +15
+##### Selected AIS identity has no registry match in GFW; an earlier identity did (`REGISTRY_LOST`, +15)
 
 - last confirmed: BALTIC FULMAR / CYP / MMSI 210925000 (2017-04-28 - 2023-06-20, registry + AIS)
 - in use at 2023-10-08: NEWNEW POLAR BEAR / HKG / MMSI 477893800 (2023-06-20 - 2025-03-11, self-reported AIS only)
+
+GFW registry coverage is incomplete; a missing match does not establish invalid registration.
 
 ### Track around the reported incident time
 

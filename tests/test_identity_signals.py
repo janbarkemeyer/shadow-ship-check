@@ -109,3 +109,43 @@ def test_name_on_other_mmsi_ignores_namesakes():
     lookups = {i.mmsi: [i] for i in (borrowed, other_ship, other_flag, before)}
     sigs = name_on_other_mmsi(hull, lookups)
     assert len(sigs) == 1 and len(sigs[0].evidence) == 1 and "511999999" in sigs[0].evidence[0]
+
+
+def test_name_on_other_mmsi_does_not_fill_gaps_between_uses():
+    from dataclasses import replace
+
+    hull = [
+        ident("A", "PLW", "511000001", 0, 10),
+        ident("B", "PLW", "511000001", 11, 99),
+        ident("A", "PLW", "511000001", 100, 110),
+    ]
+    namesake = replace(ident("A", "PLW", "511000002", 40, 50), imo=None)
+    assert name_on_other_mmsi(hull, {namesake.mmsi: [namesake]}) == []
+
+
+def test_name_on_other_mmsi_matches_flag_and_time_in_the_same_period():
+    from dataclasses import replace
+
+    hull = [ident("A", "PLW", "511000001", 0, 10), ident("A", "TGO", "671000001", 100, 110)]
+    namesake = replace(ident("A", "PLW", "511000002", 100, 110), imo=None)
+    assert name_on_other_mmsi(hull, {namesake.mmsi: [namesake]}) == []
+
+
+def test_concurrency_after_reference_date_does_not_score():
+    ids = [ident("A", "PLW", "511000001", 10, 100), ident("B", "TGO", "671000001", 20, 100)]
+    assert concurrent_identities(ids, ref=T0)[0].points == 0
+
+
+def test_concurrency_needs_thirty_observed_days_before_reference():
+    ids = [ident("A", "PLW", "511000001", -10, 100), ident("B", "TGO", "671000001", -5, 100)]
+    assert concurrent_identities(ids, ref=T0)[0].points == 0
+
+
+def test_concurrency_scores_at_the_thirty_day_boundary():
+    ids = [ident("A", "PLW", "511000001", -40, 10), ident("B", "TGO", "671000001", -30, 20)]
+    assert concurrent_identities(ids, ref=T0)[0].points == 20
+
+
+def test_concurrency_with_less_than_thirty_days_in_lookback_does_not_score():
+    ids = [ident("A", "PLW", "511000001", -2200, -1820), ident("B", "TGO", "671000001", -2100, -1820)]
+    assert concurrent_identities(ids, ref=T0)[0].points == 0

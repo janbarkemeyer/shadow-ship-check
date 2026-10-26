@@ -9,7 +9,8 @@ from typing import List, Optional
 from .models import CATEGORIES, CATEGORY_OF, Report
 
 DISCLAIMER = (
-    "Indicators only - not evidence of sabotage or any other wrongdoing. Data: Global Fishing Watch (CC BY-NC 4.0)."
+    "Research indicators only. The score is not a probability or evidence of intent or responsibility for damage. "
+    "LOW may reflect limited data. Data: Global Fishing Watch (CC BY-NC 4.0)."
 )
 
 
@@ -18,11 +19,13 @@ def _sub(r: Report) -> str:
 
 
 def _header(r: Report) -> List[str]:
-    out = [f"**Score: {r.score}/100 ({r.level})** - {_sub(r)}  "]
+    out = [f"Score: {r.score}/100 ({r.level}); {_sub(r)}  "]
     if r.window:
         out.append(f"Analysis window: {r.window[0]:%Y-%m-%d %H:%M} - {r.window[1]:%Y-%m-%d %H:%M} UTC  ")
     if r.as_of:
-        out.append(f"Data cut-off: {r.as_of:%Y-%m-%d %H:%M} UTC - only what GFW had recorded before this time  ")
+        out.append(
+            f"Timestamp cut-off: {r.as_of:%Y-%m-%d %H:%M} UTC; current identity links and registry matches retained  "
+        )
     return out
 
 
@@ -47,11 +50,11 @@ def _signals(r: Report, h: str = "##") -> List[str]:
             continue
         out += [f"{h}# {label} (+{sum(s.points for s in sigs)})", ""]
         for s in sigs:
-            out.append(f"**{s.title}** `{s.code}` +{s.points}")
+            out.append(f"{h}## {s.title} (`{s.code}`, +{s.points})")
             out.append("")
             out += [f"- {e}" for e in s.evidence]
             if s.caveat:
-                out += ["", f"> {s.caveat}"]
+                out += ["", s.caveat]
             out.append("")
     return out
 
@@ -80,7 +83,7 @@ def _summary(r: Report, n: int = 3) -> List[str]:
     top = sorted((s for s in r.signals if s.points), key=lambda s: -s.points)[:n]
     if not top:
         return ["No scored signals.", ""]
-    return [f"- **{s.title}** (+{s.points}): {s.evidence[0] if s.evidence else ''}" for s in top] + [""]
+    return [f"- {s.title} (+{s.points}): {s.evidence[0] if s.evidence else ''}" for s in top] + [""]
 
 
 def _notes(r: Report, h: str = "##") -> List[str]:
@@ -107,14 +110,20 @@ def to_markdown_case(full: Report, before: Report, title: str, case_file: Option
         "|---|---|" + "---|" * len(cats),
     ]
     for name, r in (("Before the incident", before), ("Full data", full)):
-        out.append(f"| {name} | **{r.score} {r.level}** | " + " | ".join(str(r.subscores[c]) for c in cats) + " |")
+        out.append(f"| {name} | {r.score} {r.level} | " + " | ".join(str(r.subscores[c]) for c in cats) + " |")
     out += [""]
     if before.as_of:
         out.append(f"Pre-incident data cut-off: {before.as_of:%Y-%m-%d %H:%M} UTC.  ")
     if full.window:
         out.append(f"Analysis window: {full.window[0]:%Y-%m-%d %H:%M} - {full.window[1]:%Y-%m-%d %H:%M} UTC.  ")
     out += [f"_{DISCLAIMER}_", ""]
-    out += ["## Before the incident", "", "What the checks flag using only data recorded before the cut-off:", ""]
+    out += [
+        "## Before the incident",
+        "",
+        "Retrospective timestamp filter of the bundled snapshot. Current identity links, registry matches, "
+        "manual associations and fixed 2025 flag weights remain; this does not reconstruct an advance warning.",
+        "",
+    ]
     out += _summary(before, 10)
     out += ["## Full data", "", "### Identities", ""] + _identity_table(full) + [""]
     out += ["### Signals", ""] + _signals(full, "###") + _excerpt(full, "###") + _notes(full, "###")
@@ -122,8 +131,14 @@ def to_markdown_case(full: Report, before: Report, title: str, case_file: Option
 
 
 def to_text(r: Report) -> str:
-    cut = f" (data until {r.as_of:%Y-%m-%d %H:%M} UTC)" if r.as_of else ""
+    cut = f" (timestamps through {r.as_of:%Y-%m-%d %H:%M} UTC)" if r.as_of else ""
     lines = [f"Shadow Ship Check - {r.query}", f"Score {r.score}/100 ({r.level}){cut}", f"  {_sub(r)}", ""]
+    if r.as_of:
+        lines += [
+            "Current identity links, registry matches and fixed 2025 flag weights remain; "
+            "this is not a reconstruction of an advance warning.",
+            "",
+        ]
     lines.append("Identities:")
     lines += [f"  - {i.label()}" for i in r.identities]
     lines.append("")
