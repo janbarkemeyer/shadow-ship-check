@@ -1,0 +1,5 @@
+include tests/conftest.py
+recursive-include tests/data *
+recursive-include cases *.md
+recursive-include docs *.md *.png
+recursive-include reports *.md

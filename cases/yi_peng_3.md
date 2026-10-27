@@ -13,7 +13,7 @@
 |---|---|---|---|---|
 | AVRA | Greece | 240583000 | 2012 to Jul 2015 | no |
 | AVRA | Liberia | 636017118 | Jul 2015 to Dec 2016 | yes |
-| YI PENG 3 | China | 414270000 | since 2016 (with IMO since Jun 2020) | no |
+| YI PENG 3 | China | 414270000 | after Dec 2016 (bundled AIS record with IMO from Jun 2020) | no |
 
 One sale and reflagging to China eight years before the incident; no recent identity changes detected. The
 comparison vessel Yi Peng 5 also has no scored recent identity changes. Its bundled positions
@@ -29,7 +29,8 @@ are near Taiwan, so it is not a local traffic control for the Baltic incident.
 * Cable crossings (routes from OpenStreetMap, crossing time interpolated between two GFW positions):
   BCS East-West Interlink between 07:15 and 08:46 UTC on 17 Nov at 6.7 kn over ground; the cut was
   reported around 08:00 UTC; C-Lion 1 between 01:39 and 03:10 UTC on 18 Nov at 6.2 kn; the cable
-  failed at 02:00 UTC. Both crossings fall into the slow phase, and both match the reported times.
+  failed at 02:00 UTC. Both crossings fall into the slow phase, and both reconstructed crossing intervals
+contain the reported failure times.
 
 ![Yi Peng 3 track with cable routes](../docs/img/yipeng3_cables.png)
 
@@ -43,7 +44,8 @@ are near Taiwan, so it is not a local traffic control for the Baltic incident.
 
 `CABLE_CROSSING_SLOW` (C-Lion 1 at 6.2 kn, against a median of 8.9 kn), `SPEED_DROP`, `REGISTRY_LOST` (only 5
 points; confirmation lost in 2016). The BCS crossing at 6.7 kn is just above the 70 % threshold and is
-not listed. Identity checks stay silent; before the incident the ship scores 5 (LOW).
+not listed. The identity checks that ran stay silent (the fixture has no MMSI look-ups, so MMSI reuse
+and hidden-IMO checks did not run); before the incident the ship scores 5 (LOW).
 
 The identity checks do not flag this case before the incident. Behaviour checks identify a speed
 drop and a reconstructed slow cable crossing in the full snapshot. These are candidates for further

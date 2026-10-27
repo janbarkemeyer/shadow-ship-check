@@ -11,16 +11,23 @@ from typing import Dict, List, Optional, Tuple
 from . import signals as S
 from . import watchlist as W
 from .geo import CableLayer
-from .gfw import _merge, identities_from_entries
+from .gfw import _merge, hull_identities, identities_from_entries
 from .models import Identity, Report, Signal, TrackPoint
 
 
-def merge_lookup_identities(identities: List[Identity], lookups: Optional[Dict[str, List[Identity]]]) -> List[Identity]:
-    """Add compatible name/flag/MMSI matches; preserve separate periods and foreign IMO claims."""
+def merge_lookup_identities(
+    identities: List[Identity],
+    lookups: Optional[Dict[str, List[Identity]]],
+    hull_imos: Optional[set] = None,
+) -> List[Identity]:
+    """Add compatible name/flag/MMSI matches; preserve separate periods and foreign IMO claims.
+
+    ``hull_imos`` are the hull's IMO numbers before any timestamp filtering, so a cut-off that
+    removes every dated IMO record cannot let another ship's IMO in."""
     if not lookups:
         return list(identities)
     out = {}
-    known_imos = {i.imo for i in identities if i.imo}
+    known_imos = set(hull_imos or ()) | {i.imo for i in identities if i.imo}
     for i in identities:
         _merge(out, replace(i))
     for others in lookups.values():
@@ -72,12 +79,13 @@ def identity_signals(
     mmsi_lookups: Optional[Dict[str, List[Identity]]],
     ref: Optional[datetime],
     sanctions_list: Optional[dict] = None,
+    hull_imos: Optional[set] = None,
 ) -> Tuple[List[Identity], List[Signal]]:
     """The checks that need no track: identity history, registries, MMSI use, watchlist.
 
     Returns the identities (merged with IMO-less copies found by MMSI) and the signals."""
     sigs = S.imo_hidden(identities, mmsi_lookups)
-    identities = merge_lookup_identities(identities, mmsi_lookups)
+    identities = merge_lookup_identities(identities, mmsi_lookups, hull_imos)
     sigs += S.multiple_identities(identities, ref)
     sigs += S.flag_changes(identities, ref)
     sigs += W.sanctions(identities, ref, sanctions_list)
@@ -117,6 +125,7 @@ def analyze(
     if excerpt_hours < 0:
         raise ValueError("Excerpt hours must be non-negative")
     omitted_excerpt = False
+    hull_imos = {i.imo for i in identities if i.imo}
     if as_of:
         if window:
             as_of = min(as_of, window[1])
@@ -133,7 +142,7 @@ def analyze(
         if omitted_excerpt:
             incident_time = None
     ref = window[1] if window else as_of
-    identities, sigs = identity_signals(identities, mmsi_lookups, ref, sanctions_list)
+    identities, sigs = identity_signals(identities, mmsi_lookups, ref, sanctions_list, hull_imos)
     if parallel and len(parallel) > 1:
         sigs += S.identity_handover(parallel, fetched)
         sigs += S.parallel_tracks(parallel)
@@ -172,6 +181,8 @@ def analyze(
         )
     if omitted_excerpt:
         notes.append("Incident excerpt omitted: the reported time is after the timestamp cut-off.")
+    if not mmsi_lookups:
+        notes.append("No MMSI look-ups loaded: MMSI_REUSE, NAME_ON_OTHER_MMSI and IMO_HIDDEN were not checked.")
     if not cables or not cables.lines:
         notes.append("No cable layer: cable crossings were not checked.")
     excerpt = []
@@ -221,7 +232,7 @@ def analyze_fixture(
         raise ValueError("Fixture tracks must be objects with point lists")
     if fixture.get("mmsi_lookups") is not None and not isinstance(fixture["mmsi_lookups"], dict):
         raise ValueError("Fixture MMSI lookups must be an object")
-    identities = [i for i in identities_from_entries(fixture["identities"]) if not i.imo or i.imo == case["imo"]]
+    identities = hull_identities(fixture["identities"], case["imo"])
     tracks = {k: [TrackPoint.from_row(r) for r in v["points"]] for k, v in fixture["tracks"].items()}
     lookups = {m: identities_from_entries(e, dedupe=False) for m, e in (fixture.get("mmsi_lookups") or {}).items()}
     # identities linked to the hull by hand (no IMO in GFW, found via name search)

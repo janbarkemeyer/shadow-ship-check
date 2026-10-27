@@ -15,13 +15,13 @@ ssc eval
 | | Sanctioned | Control |
 |---|---|---|
 | Who | 300 vessels drawn at random (seed 20261026) from the 645 designated under the UK Russia sanctions regime; sample designation dates between 31 Jul 2024 and 8 Oct 2026 | 300 random valid IMO numbers with a similar mix of IMO prefixes (first three digits, a rough proxy for build year), not on the UK list, known to GFW |
-| Reference date | Designation date | A designation date drawn from the sanctioned sample |
+| Reference date | Designation date | A UK Russia-regime designation date; 299 of 300 match a date in the sanctioned sample, one (26 Sep 2024) comes from the full list |
 | Data | GFW identity search by IMO, by every MMSI and by the latest name | same |
 
 * Identity timestamps are clipped at the reference date (`clip_identities`, the same mechanism
   as the pre-incident view of the cases). Undated records remain available to rules that do not
   require a dated observation; filtering does not establish that their contents were known then.
-* Only the identity checks run: there are no tracks, so the behaviour group is empty.
+* Only the identity and flag/registry checks run: there are no tracks, so the behaviour group is empty.
 * The `SANCTIONED` check is switched off; otherwise the test would be circular.
 * The thresholds were not changed after the control vessels were scored. One rule
   (`NAME_ON_OTHER_MMSI`) was fixed while building the evaluation, after looking at sanctioned
@@ -34,7 +34,7 @@ ssc eval
 
 ![Score distribution](img/evaluation.png)
 
-| | Sanctioned (n = 300) | Random ships (n = 300) |
+| | Sanctioned (n = 300) | Controls (n = 300) |
 |---|---|---|
 | Median score | 50 | 10 |
 | Score ≥ 20 (MEDIUM or HIGH) | 83 % | 31 % |
@@ -52,11 +52,11 @@ The sample and its scores have not been changed to remove this case.
 
 Share of ships with each signal:
 
-| Signal | Sanctioned | Random ships |
+| Signal | Sanctioned | Controls |
 |---|---|---|
 | `MULTI_IDENTITY` | 87 % | 40 % |
 | `FLAG_CHANGE` | 79 % | 17 % |
-| `REGISTRY_LOST` | 73 % | 29 % |
+| `REGISTRY_LOST` | 73 % | 28 % |
 | `MMSI_REUSE` | 23 % | 16 % |
 | `CONCURRENT_IDENTITIES` | 8 % | 4 % |
 | `IMO_HIDDEN` | 3 % | 6 % |
@@ -75,7 +75,8 @@ list, 51 % of the sanctioned ships have a selected grey or black flag, against 1
   as the full score. The identity group alone reaches 0.79, mostly through `MULTI_IDENTITY`, which
   is largely the same sale-and-reflag event seen from another angle.
 * The flag-change rule alone reaches AUC 0.84, compared with 0.83 for the full score. This does not
-  establish that it is superior: a paired vessel bootstrap includes zero for the difference, and
+  establish that it is superior: a paired vessel bootstrap includes zero for the difference
+  (−0.008 to +0.030), and
   neither model has an untouched test here. It does leave the extra value of the total score unproven.
 * Missing IMO fields and names under additional MMSIs occur in only a few percent of the sampled
   sanctioned vessels, with no higher observed shares than among controls. Overlapping identity
@@ -104,13 +105,15 @@ list, 51 % of the sanctioned ships have a selected grey or black flag, against 1
 
 ## Reproduce
 
-`ssc eval --json metrics.json` recomputes the reported metrics from the bundled file. The export
+`ssc eval --json metrics.json` recomputes the reported metrics from the bundled file, including the
+single-rule AUCs (`single_rule_auc`), the paired bootstrap for the flag-change rule against the total
+(`flag_change_minus_total_ci95`), the flags at the reference date and the grey/black share. The export
 also carries the interpretation and `unavailable_at_reference` counts by group.
 These count nonempty raw answers with no identities left after the timestamp filter; those vessels
 remain in the comparison at score 0. The separate `missing` count covers empty raw answers, which
 are excluded. These are completeness checks, not additional points. The collection itself ran
-in a browser session against the GFW API; the record format matches what `ssc check` gathers, so a
-new sample can be scored the same way (`ssc eval --data my_sample.json.gz`). The collection script
+in a browser session against the GFW API; the record format matches what `ssc check` gathers, and
+both select the hull's identities with the same rule, so a new sample can be scored the same way (`ssc eval --data my_sample.json.gz`). The collection script
 and full request log are not bundled, so the acquisition and sampling cannot be rerun from the
 repository alone. The current live command searches up to three recent names; this sample searched
 the latest name.
@@ -120,4 +123,9 @@ and 24 controls reaching HIGH. Further implementation corrections preserve separ
 exclude conflicting IMO claims from a hull's records, restrict MMSI reuse to that hull's MMSIs and
 select registry identities independently of row order. Registry IMO numbers are retained when AIS omits them; metadata variants do not count as additional identities, mismatches or same-dated flag transitions. Missing IMO fields now require matching flag
 and period. With the same raw sample, AUC is 0.832306, with 161 sanctioned vessels and 24 controls
-reaching HIGH. These are recalculations of reviewed data, not an improvement demonstrated on new data.
+reaching HIGH. Version 0.2.3 changes two rules: `REGISTRY_LOST` no longer fires when a registry-confirmed AIS identity
+was used alongside the selected one for at least 30 days (`CONCURRENT_IDENTITIES` reports that), and a
+record without a flag no longer counts as a different flag when it shares the MMSI, or the MMSI country
+prefix, of a flagged record with the same name. One control changes (IMO 9255880, 90 to 75); AUC is
+0.832578, still with 161 and 24 HIGH.
+These are recalculations of reviewed data, not an improvement demonstrated on new data.

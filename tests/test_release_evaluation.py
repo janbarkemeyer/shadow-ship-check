@@ -129,7 +129,7 @@ def test_bundled_metrics_keep_reviewed_scores_and_expose_the_reference_data_gap(
     original = copy.deepcopy(data)
     result = evaluate.evaluate(data, reviewed_sample=True)
     assert result["n"] == {"sanctioned": 300, "control": 300}
-    assert result["auc"] == 0.8323055555555555
+    assert result["auc"] == 0.8325777777777777
     assert result["unavailable_at_reference"] == {"sanctioned": 0, "control": 1}
     assert data == original
 

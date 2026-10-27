@@ -15,7 +15,7 @@ Retrospective timestamp filter of the bundled snapshot. Current identity links, 
 
 This control has no incident time. Its cut-off is the end of its analysis window.
 
-- Overlapping first/last dates for linked AIS identities (+5): 2015-04-11 - 2015-10-15: EVER LIVEN/TWN/416481000 and JIRENYU  00085/CHN/412286696  (less than 30 days inside the scoring period, not scored)
+- Overlapping first/last dates for linked AIS identities (+5): 2022-06-15 - 2022-08-10: EVER LIVEN/TWN/416481000 and EVER LIVEN/TWN/416481100  (same name and flag - likely a second transponder)
 
 ### Notes
 

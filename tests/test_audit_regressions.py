@@ -141,10 +141,11 @@ def test_search_follows_pagination_and_rejects_silent_truncation(monkeypatch):
 
 
 def test_reused_mmsi_is_not_silently_treated_as_one_hull():
-    from shadow_ship_check.cli import _same_hull
+    from shadow_ship_check.gfw import hull_identities
 
+    rows = [{"shipname": "SHIP", "ssvid": "211000001", "imo": imo} for imo in ("9000001", "9000002")]
     with pytest.raises(ValueError, match="multiple IMO"):
-        _same_hull([identity(), identity(imo="9000002")], "211000001")
+        hull_identities([{"selfReportedInfo": rows}], "211000001")
 
 
 def test_case_all_does_not_silently_ignore_json_output(tmp_path, capsys):

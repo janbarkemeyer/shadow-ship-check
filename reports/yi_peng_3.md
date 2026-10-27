@@ -22,6 +22,7 @@ Retrospective timestamp filter of the bundled snapshot. Current identity links, 
 - 13 track points inside the analysis window (118 loaded, 1 identity track(s)).
 - Timestamp filtering retains current identity links, registry matches and fixed 2025 flag weights; it does not reconstruct what was known at the cut-off.
 - Incident excerpt omitted: the reported time is after the timestamp cut-off.
+- No MMSI look-ups loaded: MMSI\_REUSE, NAME\_ON\_OTHER\_MMSI and IMO\_HIDDEN were not checked.
 
 ## Full data
 
@@ -88,3 +89,4 @@ Reported time (approximate): 2024-11-18 02:00 UTC. Points within +/- 3 h:
 ### Notes
 
 - 50 track points inside the analysis window (324 loaded, 1 identity track(s)).
+- No MMSI look-ups loaded: MMSI\_REUSE, NAME\_ON\_OTHER\_MMSI and IMO\_HIDDEN were not checked.

@@ -53,7 +53,8 @@ checks use separate rules and have no distance-from-shore limit.
 
 `MULTI_IDENTITY` (four name/flag combinations), `FLAG_CHANGE` (Guyana → Cameroon and Cameroon → Tanzania), `NO_REGISTRY`,
 `IMO_HIDDEN`, `CONCURRENT_IDENTITIES` (twice), `IDENTITY_HANDOVER`, `AIS_GAP`, `SLOW_LOITERING`, `ZIGZAG`,
-`CABLE_CROSSING_SLOW` (the crossing above, and four more by XINGSHUN39 on 3 Jan).
+`CABLE_CROSSING_SLOW` (the crossing above, a second SHUNXING39 crossing at 01:09–01:12 UTC on 3 Jan, and four
+more by XINGSHUN39 between 17:49 UTC on 3 Jan and 01:37 UTC on 4 Jan).
 
 ## Open questions
 

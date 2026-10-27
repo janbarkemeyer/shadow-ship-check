@@ -105,7 +105,7 @@ def eval_block() -> str:
     hi, med = r["levels"]["HIGH"], r["levels"]["MEDIUM"]
     stats = [
         (f"{r['auc']:.2f}", f"AUC (95% CI {r['auc_ci95'][0]:.2f}–{r['auc_ci95'][1]:.2f})"),
-        (f"{r['median']['sanctioned']:g} vs {r['median']['control']:g}", "median score, sanctioned vs. random"),
+        (f"{r['median']['sanctioned']:g} vs {r['median']['control']:g}", "median score, sanctioned vs. controls"),
         (f"{pct(med['sanctioned_flagged'])} vs {pct(med['controls_flagged'])}", "score ≥ 20 (MEDIUM or HIGH)"),
         (f"{pct(hi['sanctioned_flagged'])} vs {pct(hi['controls_flagged'])}", "score ≥ 50 (HIGH)"),
     ]
@@ -117,20 +117,22 @@ def eval_block() -> str:
 <h2>UK-sanctioned vessels and sampled controls</h2>
 <p>{r["n"]["sanctioned"]} vessels designated under the UK Russia sanctions regime, compared with
 {r["n"]["control"]} sampled valid IMO numbers with a similar prefix distribution. Identity timestamps are filtered
-at each reference date; current links and registry matches remain. Only identity checks run, with sanctions
+at each reference date; current links and registry matches remain. Only identity and flag/registry checks run
+(no tracks), with sanctions
 points switched off. One rule was revised while preparing the sanctioned sample, so this is not an untouched
 validation set. The comparison measures separation of these groups, not prediction of cable incidents.</p>
-<p>Identity records unavailable at the reference date: {r["unavailable_at_reference"]["sanctioned"]} sanctioned,
-{r["unavailable_at_reference"]["control"]} control vessels. These remain in the comparison at score 0;
+<p>Vessels without identity records at the reference date: {r["unavailable_at_reference"]["sanctioned"]} sanctioned,
+{r["unavailable_at_reference"]["control"]} control. These remain in the comparison at score 0;
 this is missing historical data, not evidence of an ordinary identity history.</p>
 <div class="stats">{"".join(f"<div class=stat><b>{a}</b><span>{esc(b)}</span></div>" for a, b in stats)}</div>
-<img class="fig" src="img/evaluation.png" alt="Score distribution of sanctioned vessels and random ships">
-<div class="wrap"><table><thead><tr><th>Signal</th><th class="num">sanctioned</th><th class="num">random ships</th></tr></thead>
+<img class="fig" src="img/evaluation.png" alt="Score distribution of sanctioned vessels and sampled controls">
+<div class="wrap"><table><thead><tr><th>Signal</th><th class="num">sanctioned</th><th class="num">controls</th></tr></thead>
 <tbody>{rows}</tbody></table></div>
 <p class="cap">Share of ships in each group with the signal. Details and caveats:
 <a href="{REPO}/blob/main/docs/evaluation.md">docs/evaluation.md</a>.</p>
 <p>The {pct(hi["controls_flagged"])} HIGH share applies to these {r["n"]["control"]} controls, not the world fleet or false alarms for cable incidents.
-Flag and registry signals alone reach almost the same AUC as the combined score. The bootstrap interval does
+The flag-change rule alone reaches AUC {r["single_rule_auc"]["FLAG_CHANGE"]:.2f}, so the combined score shows no
+demonstrated gain over it. The bootstrap interval does
 not include sampling bias, uncertain labels or hindsight in the source data.</p>
 """
 
@@ -158,7 +160,8 @@ one. Their tracks show a possible handover at sea. Searching GFW by IMO alone mi
 this case links it manually by name and track evidence.</p>
 
 <h2>Reference incidents</h2>
-<p>Each incident case is scored twice: with a timestamp cut-off before the incident, and with the full bundled snapshot.
+<p>Each incident case is scored twice: with a timestamp cut-off at or before the reported incident time, and with
+the full bundled snapshot.
 Current identity links, registry matches and manual associations remain. Flag weights use the 2025 Paris MoU list,
 published in July 2026. Controls use the end of the window as their cut-off. Only Finlandia is in
 its incident comparison region; Yi Peng 5 is near Taiwan and Ever Liven is in the western Pacific.

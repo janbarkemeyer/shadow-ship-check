@@ -18,7 +18,7 @@ from . import __version__, data_path, watchlist
 from .analyze import analyze, analyze_fixture, load_fixture
 from .cases import ALL, CASES
 from .geo import CableLayer
-from .gfw import GFWClient, identities_from_entries
+from .gfw import GFWClient, hull_identities, identities_from_entries
 from .models import Identity, normalize_name
 from .report import DISCLAIMER, to_json, to_markdown, to_markdown_case, to_text
 
@@ -85,17 +85,6 @@ def cmd_search(args) -> int:
     return 0
 
 
-def _same_hull(identities: List[Identity], query: str) -> List[Identity]:
-    """Keep identities that share the queried IMO/MMSI (search results are fuzzy)."""
-    q = query.strip()
-    imos = {i.imo for i in identities if q in (i.imo, i.mmsi) and i.imo}
-    if len(imos) > 1:
-        raise ValueError(
-            f"This identifier matches multiple IMO numbers: {', '.join(sorted(imos))}; check each IMO separately"
-        )
-    return [i for i in identities if q in (i.imo, i.mmsi) or (i.imo and i.imo in imos)]
-
-
 def _label(i: Identity) -> str:
     return f"{i.name}/{i.flag}/{i.mmsi}" + ("" if i.imo else " (no IMO)")
 
@@ -118,7 +107,7 @@ def cmd_check(args) -> int:
     fetch_end = min(end + pad, as_of) if as_of else end + pad
     _check_output_paths([args.json, args.md], _layer_inputs(args))
     client = GFWClient()
-    raw = _same_hull(identities_from_entries(client.search_raw(args.query), dedupe=False), args.query)
+    raw = hull_identities(client.search_raw(args.query), args.query, dedupe=False)
     if not raw:
         print(f"No vessel found for {args.query!r} (search by IMO or MMSI for exact matches).", file=sys.stderr)
         return 1
@@ -128,9 +117,21 @@ def cmd_check(args) -> int:
         for m in sorted({i.mmsi for i in raw if i.mmsi}):
             lookups[m] = [i for i in identities_from_entries(client.search_raw(m), dedupe=False) if i.mmsi == m]
         # the hull's recent names: does the name also appear under other MMSIs?
+        cutoff = as_of  # the full view searches all names; a cut-off view only names used by then
+
+        def last_seen(i: Identity):
+            return min(i.end, cutoff) if i.end and cutoff else i.end
+
         recent = sorted(
-            (i for i in raw if i.name and i.end and i.end >= start - 3 * 365 * timedelta(days=1)),
-            key=lambda i: (i.end, i.start or i.end, i.name),
+            (
+                i
+                for i in raw
+                if i.name
+                and i.end
+                and (not cutoff or (i.start or i.end) <= cutoff)
+                and last_seen(i) >= start - 3 * 365 * timedelta(days=1)
+            ),
+            key=lambda i: (last_seen(i), i.start or i.end, i.name),
             reverse=True,
         )
         names = list(dict.fromkeys(i.name for i in recent))[:3]
@@ -170,6 +171,11 @@ def cmd_check(args) -> int:
             raise ValueError(
                 f"No exact identity match for --also {q!r}; use an IMO, MMSI or exact normalised name (see ssc search)"
             )
+        # A name or MMSI can belong to other ships; only an IMO given explicitly links another IMO.
+        foreign = sorted({i.imo for i in hits if i.imo and i.imo not in hull_imos and i.imo != q})
+        hits = [i for i in hits if not i.imo or i.imo in hull_imos or i.imo == q]
+        if not hits:
+            raise ValueError(f"--also {q!r} only matches identities with other IMO numbers: {', '.join(foreign)}")
         linked += hits
         gfw_ids.update({i.vessel_id: i for i in hits if overlaps_period(i)})
 
@@ -186,8 +192,8 @@ def cmd_check(args) -> int:
     if not tracks:
         print("No AIS positions in the requested period.", file=sys.stderr)
     in_win = {k: sum(1 for p in v if start <= p.t <= end) for k, v in tracks.items()}
-    primary = max(in_win, key=in_win.get) if tracks else ""
-    extra = {k: v for k, v in tracks.items() if k != primary and in_win[k]}
+    primary = max(sorted(in_win), key=lambda k: (in_win[k], len(tracks[k]))) if tracks else ""
+    extra = {k: v for k, v in tracks.items() if k != primary and (in_win[k] or not in_win[primary])}
     fetched = {k: (start - pad, fetch_end) for k in tracks}
 
     cables = _cables(args)
@@ -299,8 +305,11 @@ def main(argv=None) -> int:
 
     c = sub.add_parser("check", help="run all checks for one vessel (live data from GFW)")
     c.add_argument("query", help="IMO or MMSI (exact match recommended)")
-    c.add_argument("--start", help="window start, YYYY-MM-DD (default: 30 days before --end)")
-    c.add_argument("--end", help="window end, YYYY-MM-DD (default: now)")
+    c.add_argument("--start", help="window start, YYYY-MM-DD[THH:MM] (UTC; default: 30 days before --end)")
+    c.add_argument(
+        "--end",
+        help="window end, YYYY-MM-DD[THH:MM] (UTC; default: now). A date alone means 00:00, so that day is excluded",
+    )
     c.add_argument("--context-days", type=int, default=3, help="extra days of track loaded around the window")
     c.add_argument("--at", help="incident time (UTC, e.g. 2025-02-24T19:00) - prints the track +/- 3 h")
     c.add_argument(
@@ -331,7 +340,7 @@ def main(argv=None) -> int:
     )
     k.set_defaults(func=cmd_case)
 
-    e = sub.add_parser("eval", help="score sanctioned shadow-fleet vessels vs. random ships (offline)")
+    e = sub.add_parser("eval", help="score UK-sanctioned vessels vs. sampled controls (offline)")
     e.add_argument("--data", help="evaluation file (default: the bundled data/eval set)")
     e.add_argument("--json", help="write the metrics as JSON")
     e.set_defaults(func=cmd_eval)
@@ -339,6 +348,12 @@ def main(argv=None) -> int:
     args = p.parse_args(argv)
     try:
         return args.func(args)
+    except BrokenPipeError:  # e.g. `ssc case all | head`
+        try:
+            sys.stdout = open(os.devnull, "w")
+        except OSError:
+            pass
+        return 0
     except urllib.error.HTTPError as exc:
         if exc.code in (401, 403):
             print(

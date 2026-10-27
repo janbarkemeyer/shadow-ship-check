@@ -176,6 +176,55 @@ def identities_from_entries(entries: list, dedupe: bool = True) -> List[Identity
     return sorted(out.values(), key=lambda i: i.start or _EPOCH)
 
 
+def hull_identities(entries: list, query: str, dedupe: bool = True) -> List[Identity]:
+    """Identities of the hull behind an IMO/MMSI query (search results are fuzzy).
+
+    Selection works per GFW entry. An entry with a hull IMO keeps its rows without an IMO, because
+    GFW groups a hull's earlier names in the same entry; rows with another IMO are dropped. An entry
+    that matches the query but carries only other IMOs belongs to another ship: only its IMO-less
+    rows with the queried MMSI stay (MMSI reuse), and its registry rows cannot confirm them.
+    """
+    identities_from_entries(entries, dedupe=False)  # validate every entry, kept or not
+    q = (query or "").strip()
+
+    def rows(entry):
+        return [*(entry.get("selfReportedInfo") or []), *(entry.get("registryInfo") or [])]
+
+    matched = [e for e in entries if any(q in (r.get("imo"), r.get("ssvid")) for r in rows(e))]
+    imos = {r.get("imo") for e in matched for r in rows(e) if r.get("imo") and q in (r.get("imo"), r.get("ssvid"))}
+    if len(imos) > 1:
+        raise ValueError(
+            f"This identifier matches multiple IMO numbers: {', '.join(sorted(imos))}; check each IMO separately"
+        )
+    kept = []
+    for entry in entries:
+        entry_imos = {r.get("imo") for r in rows(entry) if r.get("imo")}
+        if entry_imos & imos:
+
+            def keep(r):
+                return not r.get("imo") or r.get("imo") in imos
+        elif any(entry is m for m in matched) and not entry_imos:
+
+            def keep(r):
+                return True
+        elif any(entry is m for m in matched):
+
+            def keep(r):
+                return not r.get("imo") and r.get("ssvid") == q
+        else:
+            continue
+        foreign_entry = not entry_imos & imos and bool(entry_imos)
+        kept.append(
+            {
+                **entry,
+                "selfReportedInfo": [r for r in entry.get("selfReportedInfo") or [] if keep(r)],
+                # another ship's registry rows never confirm the rows kept from its entry
+                "registryInfo": [] if foreign_entry else [r for r in entry.get("registryInfo") or [] if keep(r)],
+            }
+        )
+    return [i for i in identities_from_entries(kept, dedupe=dedupe) if not i.imo or i.imo in imos]
+
+
 def _norm(name) -> str:
     return normalize_name(name)
 

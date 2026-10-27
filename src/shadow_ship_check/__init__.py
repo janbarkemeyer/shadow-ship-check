@@ -1,6 +1,6 @@
 """Shadow Ship Check - AIS identities and tracks around reported subsea cable incidents."""
 
-__version__ = "0.2.2"
+__version__ = "0.2.3"
 
 
 def data_path():

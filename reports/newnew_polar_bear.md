@@ -16,14 +16,15 @@ _Heuristic research indicators only. The score is not a probability or evidence 
 Retrospective timestamp filter of the bundled snapshot. Current identity links, registry matches, manual associations and fixed 2025 flag weights remain; this does not reconstruct an advance warning.
 
 - Selected AIS identity has no registry match in GFW; an earlier identity did (+15): last confirmed: BALTIC FULMAR / CYP / MMSI 210925000 (2017-04-28 - 2023-06-20, registry + AIS)
-- 2 distinct name/flag combinations in the 5 years before 2023-10-07 (5 linked records in total) (+10):   REINBEK / LBR / MMSI 636091998 (2012-01-03 - 2014-03-13, self-reported AIS only)
-- 4 flag change(s) (+5): 2014-03-13: LBR -&gt; MLT (Paris MoU white, ITF flag of convenience)  \[REINBEK -&gt; REINBEK\]
+- 2 distinct name/flag combinations in the 5 years before 2023-10-07 (5 linked records in total) (+10): \* NEWNEW POLAR BEAR / HKG / MMSI 477893800 (2023-06-20 - 2023-10-07, self-reported AIS only)
+- 4 flag change(s) (+5): 2023-06-20: CYP -&gt; HKG (Paris MoU white)  \[BALTIC FULMAR -&gt; NEWNEW POLAR BEAR\]  (recent)
 
 ### Notes
 
 - 3 track points inside the analysis window (49 loaded, 1 identity track(s)).
 - Timestamp filtering retains current identity links, registry matches and fixed 2025 flag weights; it does not reconstruct what was known at the cut-off.
 - Incident excerpt omitted: the reported time is after the timestamp cut-off.
+- No MMSI look-ups loaded: MMSI\_REUSE, NAME\_ON\_OTHER\_MMSI and IMO\_HIDDEN were not checked.
 
 ## Full data
 
@@ -86,3 +87,4 @@ Reported time (approximate): 2023-10-07 22:20 UTC. Points within +/- 3 h:
 ### Notes
 
 - 11 track points inside the analysis window (255 loaded, 1 identity track(s)).
+- No MMSI look-ups loaded: MMSI\_REUSE, NAME\_ON\_OTHER\_MMSI and IMO\_HIDDEN were not checked.

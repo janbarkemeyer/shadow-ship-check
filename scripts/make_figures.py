@@ -263,7 +263,7 @@ def fig_evaluation():
     width = 3.6
     for off, (key, color, label) in zip(
         (-width / 2, width / 2),
-        (("control", MUTED, "random ships"), ("sanctioned", C2, "UK-sanctioned (Russia), at designation date")),
+        (("control", MUTED, "sampled controls"), ("sanctioned", C2, "UK-sanctioned (Russia), at designation date")),
     ):
         vals = groups[key]
         counts = [sum(1 for v in vals if b <= v < b + 10 or (b == 90 and v == 100)) / len(vals) for b in bins[:-1]]

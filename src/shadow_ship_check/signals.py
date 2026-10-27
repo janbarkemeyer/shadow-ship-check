@@ -68,6 +68,14 @@ def active_at(identities: Sequence[Identity], ref: datetime) -> Optional[Identit
 # ---------------------------------------------------------------------------
 # Identity checks
 # ---------------------------------------------------------------------------
+def _same_flag_unknown(record: Identity, known: Sequence[Identity]) -> bool:
+    """A record without a flag matches a flagged record of the same name when it shares that record's
+    MMSI, or when its MMSI country prefix gives that flag. An unknown prefix stays a different flag."""
+    return any(
+        k.flag and (record.mmsi and record.mmsi == k.mmsi or flag_from_mmsi(record.mmsi) == k.flag) for k in known
+    )
+
+
 def multiple_identities(
     identities: Sequence[Identity], ref: Optional[datetime] = None, lookback_years: int = 5
 ) -> List[Signal]:
@@ -78,7 +86,12 @@ def multiple_identities(
         return []
     ev = [("* " if i in recent else "  ") + i.label() for i in named]
     # a new MMSI under the same name and flag is not a new identity for scoring
-    distinct = {(i.key[0], i.flag) for i in recent}
+    flagged = [i for i in recent if i.flag]
+    distinct = {
+        (i.key[0], i.flag)
+        for i in recent
+        if i.flag or not _same_flag_unknown(i, [k for k in flagged if k.key[0] == i.key[0]])
+    }
     pts = min(30, 10 * (len(distinct) - 1)) if len(distinct) >= 2 else 0
     return [
         Signal(
@@ -153,6 +166,21 @@ def registry_confirmation(
     ref = _ref(ref)
     current = active_at(identities, ref)
     if not current or current.registry_confirmed:
+        return []
+    if (
+        current.start
+        and current.end
+        and any(
+            i.registry_confirmed
+            and i.source == "ais"
+            and i.start
+            and i.end
+            and i.start <= ref <= i.end
+            and min(i.end, current.end, ref) - max(i.start, current.start) >= timedelta(days=30)
+            for i in identities
+        )
+    ):
+        # A confirmed identity used alongside the selected one for 30+ days: CONCURRENT_IDENTITIES reports it.
         return []
     confirmed = [
         i
@@ -343,10 +371,20 @@ def concurrent_identities(
             lo, hi = max(a.start, b.start), min(a.end, b.end)
             if (hi - lo) < timedelta(days=min_overlap_days):
                 continue
-            same = a.key[0] == b.key[0] and a.flag == b.flag
+            missing = not a.flag or not b.flag
+            same = a.key[0] == b.key[0] and (
+                (a.flag and a.flag == b.flag)
+                or (
+                    not a.flag and not b.flag and (a.mmsi == b.mmsi or flag_from_mmsi(a.mmsi) == flag_from_mmsi(b.mmsi))
+                )
+                or (not a.flag and _same_flag_unknown(a, [b]))
+                or (not b.flag and _same_flag_unknown(b, [a]))
+            )
             recent = min(hi, ref) - max(lo, lo_limit) >= timedelta(days=min_overlap_days)
             line = f"{lo:%Y-%m-%d} - {hi:%Y-%m-%d}: {a.name}/{a.flag}/{a.mmsi} and {b.name}/{b.flag}/{b.mmsi}"
-            if same:
+            if same and missing:
+                line += "  (same name; flag missing on one or both records - likely a second transponder)"
+            elif same:
                 line += "  (same name and flag - likely a second transponder)"
             if not recent:
                 line += f"  (less than {min_overlap_days:g} days inside the scoring period, not scored)"
@@ -530,6 +568,18 @@ def ais_gaps(
         else:
             ev.append("no track points at all inside the analysis window")
             score += 15
+    if window and pts:
+        # Silence at the edges of the loaded data has no closing position, so it is described, not scored.
+        for edge, gap, side in (
+            (pts[0].t, pts[0].t - window[0], "the window start and this identity's first loaded position"),
+            (pts[-1].t, window[1] - pts[-1].t, "this identity's last loaded position and the window end/cut-off"),
+        ):
+            hours = gap.total_seconds() / 3600
+            if window[0] <= edge <= window[1] and hours >= min_hours:
+                ev.append(
+                    f"{hours:.1f} h between {side} ({_fmt(edge)}) - not scored: no position of this identity "
+                    "closes the interval (another linked identity may cover it)"
+                )
     scored = score > 0
     if quiet:
         ev.append(
@@ -603,9 +653,19 @@ def connected(p: TrackPoint, q: TrackPoint, max_gap_h: float = 3.0) -> bool:
     return p.segment == q.segment and timedelta(0) < q.t - p.t <= timedelta(hours=max_gap_h)
 
 
+def _unique_times(points: Sequence[TrackPoint]) -> List[TrackPoint]:
+    """Sorted points with repeated timestamps collapsed to the first report."""
+    out: List[TrackPoint] = []
+    for p in sorted(points, key=lambda p: p.t):
+        if out and p.t == out[-1].t and p.segment == out[-1].segment:
+            continue
+        out.append(p)
+    return out
+
+
 def _runs(points: Sequence[TrackPoint], pred) -> List[List[TrackPoint]]:
     runs, cur = [], []
-    for p in points:
+    for p in _unique_times(points):
         if cur and not connected(cur[-1], p):
             runs.append(cur)
             cur = []
@@ -695,7 +755,7 @@ def zigzag(
 ) -> List[Signal]:
     """Path much longer than net displacement at low average speed:
     zig-zagging, loops, circling. The speed limit keeps shuttle ferries out."""
-    pts = sorted(points, key=lambda p: p.t)
+    pts = _unique_times(points)
     ev, last_end = [], None
     for i, p in enumerate(pts):
         if last_end and p.t < last_end:
@@ -748,6 +808,8 @@ def cable_crossings(
         hours = (q.t - p.t).total_seconds() / 3600
         if not connected(p, q, max_gap_h):
             continue
+        if abs(q.lon - p.lon) > 180:
+            continue  # segment crosses the date line; the bundled layers do not reach it
         rate = haversine_nm(p.lat, p.lon, q.lat, q.lon) / hours
         if rate > limit or (rate < 1.0 and max(p.speed, q.speed) < 1.0):
             continue

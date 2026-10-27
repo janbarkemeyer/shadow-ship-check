@@ -1,18 +1,24 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "shadow-ship-check"
-version = "0.2.2"
+version = "0.2.3"
 description = "Inspect AIS identity changes and tracks around reported subsea cable incidents in Taiwan and the Baltic Sea."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Jan Barkemeyer" }]
 dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=7", "ruff>=0.5"]
+
+[project.urls]
+Homepage = "https://janbarkemeyer.github.io/shadow-ship-check/"
+Source = "https://github.com/janbarkemeyer/shadow-ship-check"
 
 [project.scripts]
 ssc = "shadow_ship_check.cli:main"

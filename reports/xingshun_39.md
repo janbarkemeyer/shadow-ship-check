@@ -15,11 +15,11 @@ _Heuristic research indicators only. The score is not a probability or evidence 
 
 Retrospective timestamp filter of the bundled snapshot. Current identity links, registry matches, manual associations and fixed 2025 flag weights remain; this does not reconstruct an advance warning.
 
-- 4 distinct name/flag combinations in the 5 years before 2025-01-02 (6 linked records in total) (+30): \* BAOLONG36 / GUY / MMSI 750342000 (2022-11-17 - 2022-11-24, self-reported AIS only)
-- 3 flag change(s) (+30): 2022-11-24: GUY -&gt; CMR (Paris MoU black, ITF flag of convenience)  \[BAOLONG36 -&gt; BAOLONG36\]  (recent)
-- Overlapping first/last dates for linked AIS identities (+20): 2022-11-29 - 2023-02-10: BAOLONG36/CMR/613003836 and BAOLONG36/GUY/750342000
+- 4 distinct name/flag combinations in the 5 years before 2025-01-02 (6 linked records in total) (+30): \* SHUNXING39 / CMR / MMSI 613003889 (2024-09-28 - 2025-01-02, self-reported AIS only)
+- 3 flag change(s) (+30): 2024-03-04: CMR -&gt; TZA (Paris MoU black, ITF flag of convenience)  \[BAOLONG36 -&gt; XINGSHUN39\]  (recent)
+- Overlapping first/last dates for linked AIS identities (+20): 2024-09-28 - 2025-01-02: XINGSHUN39/TZA/677087200 and SHUNXING39/CMR/613003889
 - Possible identity handover (one AIS track stops, another starts nearby) (+20): XINGSHUN39/TZA/677087200 stops 2024-12-28 22:11 UTC at 25.163,121.753 -&gt; SHUNXING39/CMR/613003889 (no IMO) starts 2024-12-29 02:44 UTC at 25.588,121.803 (273 min, 25.7 nm)
-- AIS gaps (+15): \[XINGSHUN39/TZA/677087200\] no positions of this identity inside the analysis window; reachable linked observations exist, so no additional absence points (this does not establish continuous coverage)
+- AIS gaps (+15): \[SHUNXING39/CMR/613003889 (no IMO)\] 2024-12-29 05:55 UTC -&gt; 2024-12-29 19:49 UTC: 13.9 h without position, 11 nm straight-line jump (implied 0.8 kn), 25.922,121.823 -&gt; 26.104,121.783
 - No dated registry match at or before the reference date in GFW (+10): selected for 2025-01-02: SHUNXING39 / CMR / MMSI 613003889 (2024-09-28 - 2025-01-02, self-reported AIS only)
 - Identity also used without its IMO number (+10): XINGSHUN39 / TZA / MMSI 677087200 (2024-06-16 - 2024-09-29, self-reported AIS only) - same name and MMSI, but no IMO number broadcast
 
@@ -101,8 +101,10 @@ GFW registry coverage varies by flag and access level; a missing or undated matc
 ##### AIS gaps (`AIS_GAP`, +15)
 
 - \[XINGSHUN39/TZA/677087200\] 2024-12-28 22:11 UTC -&gt; 2025-01-03 08:52 UTC: 130.7 h without position, 11 nm straight-line jump (implied 0.1 kn), 25.163,121.753 -&gt; 25.335,121.707; plausible linked positions reduce gap points from 20 to 10  &lt;-- overlaps the analysis window
+- \[XINGSHUN39/TZA/677087200\] 22.4 h between this identity's last loaded position and the window end/cut-off (2025-01-04 01:37 UTC) - not scored: no position of this identity closes the interval (another linked identity may cover it)
 - \[SHUNXING39/CMR/613003889 (no IMO)\] 2024-12-29 05:55 UTC -&gt; 2024-12-29 19:49 UTC: 13.9 h without position, 11 nm straight-line jump (implied 0.8 kn), 25.922,121.823 -&gt; 26.104,121.783
 - \[SHUNXING39/CMR/613003889 (no IMO)\] 2024-12-29 20:07 UTC -&gt; 2024-12-31 14:07 UTC: 42.0 h without position, 10 nm straight-line jump (implied 0.2 kn), 26.104,121.783 -&gt; 25.972,121.894
+- \[SHUNXING39/CMR/613003889 (no IMO)\] 39.7 h between this identity's last loaded position and the window end/cut-off (2025-01-03 08:19 UTC) - not scored: no position of this identity closes the interval (another linked identity may cover it)
 - \[SHUNXING39/CMR/613003889 (no IMO)\] 1 further gap(s) &gt;= 6 h without movement (port / anchorage / sparse data) - not scored
 
 Public GFW tracks are simplified (often one point every 60-90 min on open water). Short gaps and brief manoeuvres can be invisible or exaggerated.

@@ -15,14 +15,14 @@ _Heuristic research indicators only. The score is not a probability or evidence 
 
 Retrospective timestamp filter of the bundled snapshot. Current identity links, registry matches, manual associations and fixed 2025 flag weights remain; this does not reconstruct an advance warning.
 
-- 4 distinct name/flag combinations in the 5 years before 2025-02-24 (5 linked records in total) (+30): \* JIN LONG 389 / CHN / MMSI 413762751 (2012-08-23 - 2022-10-09, registry + AIS)
+- 4 distinct name/flag combinations in the 5 years before 2025-02-24 (5 linked records in total) (+30): \* HONGTA8 / TZA / MMSI 677082100 (2025-01-05 - 2025-02-05, self-reported AIS only)
 - Overlapping first/last dates for linked AIS identities (+20): 2025-01-05 - 2025-02-05: HONGTAI58/TGO/671756000 and HONGTA8/TZA/677082100
 - Possible identity handover (one AIS track stops, another starts nearby) (+20): HONGTAI58/671756000 (IMO 8357069) stops 2024-12-15 02:01 UTC at 34.278,128.456 -&gt; HONGTA 8/677082100 (IMO 8357069) starts 2024-12-15 03:17 UTC at 34.278,128.456 (76 min, 0.0 nm)
 - Linked identities report distant positions within one hour (+20): HONGTAI58/671756000 (no IMO) at 25.98,120.91 (2024-12-17 21:30 UTC) vs HONGTA 8/677082100 (IMO 8357069) at 34.69,128.88 (2024-12-17 20:37 UTC): 666 nm apart
 - Crossed a mapped cable or pipeline at reduced speed (+20): 2025-02-22 03:49 UTC -&gt; 05:20: crosses unnamed pipeline (OSM way 1357665582) at 4.0 kn over ground, around 23.045,119.979
 - 1 flag change(s) (+15): 2023-07-31: CHN -&gt; TGO (Paris MoU black, ITF flag of convenience)  \[DONGSHUN3 -&gt; HONGTAI58\]  (recent)
 - Selected AIS identity has no registry match in GFW; an earlier identity did (+15): last confirmed: DONGSHUN3 / CHN / MMSI 413762751 (2022-10-27 - 2023-09-05, registry record)
-- MMSI shared with other vessels (2 within 2 years, 4 outside or undated) (+15): MMSI 677082100 also used by YEKTA 3 / TZA / MMSI 677082100 (2020-09-14 - 2024-07-19, self-reported AIS only), IMO 8889842  (within 2 years)
+- MMSI shared with other vessels (2 within 2 years, 4 outside or undated) (+15): MMSI 677082100 also used by LADY EMERALD / TZA / MMSI 677082100 (2024-06-29 - 2024-11-07, self-reported AIS only)  (within 2 years)
 - Known name reported under an additional MMSI (+15): HONGTAI58 / TGO / MMSI 671666000 (2024-11-27 - 2024-12-04, self-reported AIS only) - MMSI also used by KARAM
 - Identity also used without its IMO number (+10): HONGTAI58 / TGO / MMSI 671756000 (2023-11-21 - 2025-02-24, self-reported AIS only) - same name and MMSI, but no IMO number broadcast
 
@@ -121,6 +121,7 @@ GFW registry coverage is incomplete; a missing match does not establish invalid 
 
 ##### AIS gaps (not scored) (`AIS_GAP`, +0)
 
+- 19.7 h between this identity's last loaded position and the window end/cut-off (2025-02-25 04:18 UTC) - not scored: no position of this identity closes the interval (another linked identity may cover it)
 - 1 further gap(s) &gt;= 6 h without movement (port / anchorage / sparse data) - not scored
 
 Public GFW tracks are simplified (often one point every 60-90 min on open water). Short gaps and brief manoeuvres can be invisible or exaggerated.

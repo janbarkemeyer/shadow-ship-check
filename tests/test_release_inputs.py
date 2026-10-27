@@ -9,7 +9,7 @@ from itertools import permutations
 import pytest
 
 from shadow_ship_check import cli, signals
-from shadow_ship_check.gfw import identities_from_entries
+from shadow_ship_check.gfw import hull_identities, identities_from_entries
 from shadow_ship_check.models import TrackPoint
 
 T = datetime(2025, 1, 1, tzinfo=timezone.utc)
@@ -250,9 +250,9 @@ def test_unmatched_manual_link_is_an_error_without_partial_output(monkeypatch, t
 
 
 def test_ambiguous_mmsi_error_lists_the_candidate_imos():
-    rows = identities_from_entries([{"selfReportedInfo": [_row(imo=imo) for imo in ("9000002", "9000001")]}])
+    entries = [{"selfReportedInfo": [_row(imo=imo) for imo in ("9000002", "9000001")]}]
     with pytest.raises(ValueError, match="9000001, 9000002"):
-        cli._same_hull(rows, "211000001")
+        hull_identities(entries, "211000001")
 
 
 @pytest.mark.parametrize("symlink_directory", [False, True])

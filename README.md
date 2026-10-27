@@ -25,12 +25,12 @@ identity; this case links it manually by name and track evidence.*
 
 ## Results
 
-Each incident case is scored twice: with a cut-off before the incident, and with the full bundled snapshot.
+Each incident case is scored twice: with a timestamp cut-off at or before the reported incident time, and with the full bundled snapshot.
 The first score uses earlier timestamps but today's identity links and registry matches. Flag
 weights use the Paris MoU 2025 list, published in July 2026. This is a retrospective comparison,
 not a reconstruction of what an analyst could have known at the time.
 
-| Ship | Incident | Timestamp cut-off | Full data | What stands out at the cut-off |
+| Ship | Incident | Timestamp cut-off | Full data | Notes |
 |---|---|---|---|---|
 | [Xingshun 39](cases/xingshun_39.md) | Keelung cable, Jan 2025 | 100 | 100 | Manually linked identity without IMO; overlapping dates and a possible handover off Keelung |
 | [Hong Tai 58](cases/hong_tai_58.md) | Taiwan–Penghu cable, Feb 2025 | 100 | 100 | Identity cluster with conflicting tracks; some history may belong to another hull |
@@ -49,12 +49,12 @@ ship identifier ([cases/matsu_2023.md](cases/matsu_2023.md)).
 The separate comparison uses 300 vessels designated under the UK Russia sanctions regime and 300
 random valid IMO numbers with a similar prefix distribution. Identities are cut off at each
 reference date, and sanctions contribute no points. Median score 50 vs. 10; 54 % vs. 8 % reach HIGH;
-AUC 0.83 (95 % bootstrap interval 0.80–0.86). Flag and registry signals alone reach almost the same
-AUC. This measures separation of the sampled groups, not prediction of cable damage. One rule was
+AUC 0.83 (95 % bootstrap interval 0.80–0.86). The flag-change rule alone reaches AUC 0.84, so the
+combined score shows no demonstrated gain over it. This measures separation of the sampled groups, not prediction of cable damage. One rule was
 revised while preparing the sanctioned sample, so this is not an untouched validation set.
 Details: [docs/evaluation.md](docs/evaluation.md).
 
-![Identity score of sanctioned vessels vs. random ships](docs/img/evaluation.png)
+![Identity score of sanctioned vessels vs. sampled controls](docs/img/evaluation.png)
 
 ## Quick start
 
@@ -133,7 +133,8 @@ Data sources and formats: [docs/data.md](docs/data.md).
 * Historical cut-offs retain current GFW identity links, registry matches and fixed flag weights.
   Manually linked identities also use later knowledge. They cannot demonstrate an advance warning.
 * The rules were written with these incidents in mind and adjusted against three control vessels.
-  The separate evaluation covers identity rules only and was partly used during development.
+  The separate evaluation covers the identity and flag/registry rules only (no tracks) and was partly
+  used during development.
   Behaviour rules have no independent validation.
 * Cable routes are incomplete. OpenStreetMap has C-Lion1, BCS, Balticconnector and Estlink, but
   not TPKM-3 or the named trans-Pacific cables off Taiwan.
@@ -143,6 +144,8 @@ Data sources and formats: [docs/data.md](docs/data.md).
 * The 8 % HIGH share applies to the 300 sampled controls. It is not a fleet-wide estimate or the
   false-alarm rate for cable incidents. A high score needs independent follow-up.
 * Incident times are approximate and taken from public reporting.
+* Eagle S sits exactly on the HIGH line before the incident; 15 of its 50 points come from a gap that is
+  most likely missing coverage.
 
 ## Repository layout
 

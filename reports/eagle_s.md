@@ -17,7 +17,7 @@ Retrospective timestamp filter of the bundled snapshot. Current identity links, 
 
 - Selected AIS identity has no registry match in GFW; an earlier identity did (+15): last confirmed: NORSTAR INTREPID / MHL / MMSI 538003031 (2012-01-26 - 2023-07-22, registry + AIS)
 - AIS gaps (+15): no track points at all inside the analysis window
-- 2 distinct name/flag combinations in the 5 years before 2024-12-25 (2 linked records in total) (+10): \* NORSTAR INTREPID / MHL / MMSI 538003031 (2012-01-26 - 2023-07-22, registry + AIS)
+- 2 distinct name/flag combinations in the 5 years before 2024-12-25 (2 linked records in total) (+10): \* EAGLE-S / COK / MMSI 518998865 (2023-07-22 - 2024-12-25, self-reported AIS only)
 - 1 flag change(s) (+10): 2023-07-22: MHL -&gt; COK (Paris MoU grey, ITF flag of convenience)  \[NORSTAR INTREPID -&gt; EAGLE-S\]  (recent)
 
 ### Notes
@@ -25,6 +25,7 @@ Retrospective timestamp filter of the bundled snapshot. Current identity links, 
 - 0 track points inside the analysis window (1686 loaded, 1 identity track(s)).
 - No positions inside the analysis window: movement findings are limited by missing data.
 - Timestamp filtering retains current identity links, registry matches and fixed 2025 flag weights; it does not reconstruct what was known at the cut-off.
+- No MMSI look-ups loaded: MMSI\_REUSE, NAME\_ON\_OTHER\_MMSI and IMO\_HIDDEN were not checked.
 
 ## Full data
 
@@ -85,3 +86,4 @@ No loaded AIS positions in this interval.
 
 - 0 track points inside the analysis window (1814 loaded, 1 identity track(s)).
 - No positions inside the analysis window: movement findings are limited by missing data.
+- No MMSI look-ups loaded: MMSI\_REUSE, NAME\_ON\_OTHER\_MMSI and IMO\_HIDDEN were not checked.

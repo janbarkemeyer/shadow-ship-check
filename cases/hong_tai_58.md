@@ -15,7 +15,7 @@
 | JIN LONG 389 | China | 413762751 | 2012 to Oct 2022 | registry-confirmed |
 | DONGSHUN3 | China | 413762751 | Oct 2022 to Sep 2023 | registry record only |
 | HONGTAI58 | Togo | 671756000 | Jul 2023 to 15 Dec 2024 (with IMO) / Nov 2023 to 27 Feb 2025 (without IMO) | self-reported |
-| HONGTA 8 | Tanzania | 677082100 | 15 Dec 2024 to 2 Jan 2025; 4 Jan to 5 Feb 2025 | first period with IMO, second without IMO |
+| HONGTA 8 | Tanzania | 677082100 | 15 Dec 2024 to 2 Jan 2025; 5 Jan to 5 Feb 2025 (as HONGTA8) | first period with IMO, second without IMO |
 | HONGTAI58 | Togo | 671666000 | 27 Nov to 4 Dec 2024 | MMSI previously registered to another ship (KARAM, IMO 8116180) |
 | HONGTAI58 | Togo | 671280000 | 25 to 26 Dec 2023 | MMSI also used by XINJINLIN6 |
 
@@ -35,7 +35,8 @@ detained hull.
   position at 02:01 UTC off the south coast of Korea (34.278 N, 128.456 E). At 03:17 UTC HONGTA 8
   (Tanzania, same IMO) starts at exactly the same position.
 * On 17 Dec 2024 the IMO-less HONGTAI58 identity reports a position north of
-  Taiwan (25.98 N, 120.91 E) while HONGTA 8 is 666 nm away off Korea; again on 12 Jan 2025 (728 nm).
+  Taiwan (25.98 N, 120.91 E) while HONGTA 8 is 666 nm away off Korea; again on 12 Jan 2025, then 728 nm
+  from the IMO-less HONGTA8 identity.
   Either two hulls share the HONGTAI58 identity data, or GFW merged two identities wrongly.
 * The IMO-less HONGTAI58 identity has positions off Kaohsiung from mid-January,
   moves north on 22 Feb and reports low-speed positions near 23.30 N, 120.02 E between
@@ -60,8 +61,9 @@ tool cannot test the anchorage against the damaged cable.
 
 ## Open questions
 
-1. Exact time of the break (reports say "early morning"); the excerpt in the report covers
-   16:00–22:00 UTC on 24 Feb (00:00–06:00 local).
+1. Exact time of the break. Chunghwa Telecom reported the fault at 03:03 local time on 25 Feb
+   (19:03 UTC on 24 Feb), the time the tool uses; the report excerpt covers 16:03–22:03 UTC. The fault
+   detection time need not be the moment of damage.
 2. Is the detained hull IMO 8357069? Which hull was where in Dec 2024 / Jan 2025? The parallel tracks
    need a check against port-state records, the IMO number painted on the hull, or satellite imagery.
 3. What happened between 27 Nov and 4 Dec 2024, when HONGTAI58 used the MMSI of KARAM? (Track not yet
@@ -73,6 +75,7 @@ tool cannot test the anchorage against the damaged cable.
 * GFW vessel search and tracks (fixture `data/fixtures/hong_tai_58.json`, fetched 26 Oct 2026)
 * [Reuters via Baird Maritime, 25 Feb 2025](https://www.bairdmaritime.com/security/non-naval-security/taiwan-detains-china-linked-cargo-ship-after-undersea-cable-disconnected): detention, Togo flag, anchored near the cable since the weekend
 * [Taiwan News (Chinese), 25 Feb 2025](https://www.taiwannews.com.tw/zh/news/6044971): break 6 nm north-west of Jiangjun fishing port
+* [TechNews (Chinese), 25 Feb 2025](https://technews.tw/2025/02/25/taiwan-penghu-submarine-cable-no3/): Chunghwa Telecom reports the TPKM-3 fault at 03:03 local time
 * [Reuters via Baird Maritime, 12 Jun 2025](https://www.bairdmaritime.com/security/incidents/piracy/taiwan-hands-jail-term-to-chinese-captain-for-damaging-subsea-cables): three-year sentence
 * [Tainan District Court, 12 Jun 2025](https://www.judicial.gov.tw/tw/cp-1888-1341586-34f43-1.html): first-instance judgment, case 114年度訴字第235號
 * [Court appeal statement, 29 Aug 2025](https://www.judicial.gov.tw/tw/cp-1888-1395515-e9707-1.html): prosecution's sentence appeal dismissed, three-year sentence upheld; further appeal allowed

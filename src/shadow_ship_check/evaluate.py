@@ -1,4 +1,4 @@
-"""Sample comparison of the identity rules: sanctioned vessels vs. sampled controls.
+"""Sample comparison of the identity and flag/registry rules: sanctioned vessels vs. sampled controls.
 
 Each record in the evaluation file holds the raw GFW identity search results for one hull
 (plus the MMSI and name look-ups that ``ssc check`` would make) and a reference date:
@@ -6,9 +6,9 @@ Each record in the evaluation file holds the raw GFW identity search results for
 * ``sanctioned`` - vessels designated under the UK Russia sanctions regime; reference date =
   designation date, so only identity history recorded *before* the designation counts;
 * ``control`` - random IMO numbers drawn with the same IMO-prefix (≈ build year) mix, not on
-  the UK list, each with a reference date drawn from the positives' designation dates.
+  the UK list, each with a reference date drawn from UK Russia-regime designation dates.
 
-Only the identity checks run (there is no track). The ``SANCTIONED`` watchlist check is off -
+Only the identity and flag/registry checks run (there is no track). The ``SANCTIONED`` check is off -
 otherwise the test would be circular. NAME_ON_OTHER_MMSI was revised after
 inspecting sanctioned vessels; this is not an untouched validation set.
 """
@@ -23,12 +23,14 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from statistics import median
-from typing import Dict, List, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from . import data_path
 from .analyze import clip_identities, identity_signals
-from .gfw import identities_from_entries
+from .gfw import hull_identities, identities_from_entries
 from .models import CATEGORIES, CATEGORY_OF, normalize_name
+from .registries import flag_tier
+from .signals import active_at
 
 BUNDLED = data_path() / "eval" / "uk_sanctions_vs_random.json.gz"
 LEVELS = (("HIGH", 50), ("MEDIUM", 20))
@@ -77,10 +79,11 @@ def _entries(entries: list, dedupe: bool = True) -> list:
     return identities
 
 
-def _score_record(rec: dict) -> Tuple[int, Dict[str, int], bool]:
+def _score_record(rec: dict) -> Tuple[int, Dict[str, int], bool, Optional[str]]:
     _validate_record(rec)
     ref = _ref(rec["as_of"])
-    own = [i for i in _entries(rec["identities"]) if not i.imo or i.imo == rec["imo"]]
+    _entries(rec["identities"])
+    own = hull_identities(rec["identities"], rec["imo"])
     if rec["identities"] and not own:
         raise ValueError("Evaluation response has no identity compatible with the requested IMO")
     identities = clip_identities(own, ref)
@@ -95,16 +98,17 @@ def _score_record(rec: dict) -> Tuple[int, Dict[str, int], bool]:
             if i.mmsi and i.mmsi not in direct_mmsis and i.key[0] == normalize_name(name):
                 lookups.setdefault(i.mmsi, []).append(i)
     lookups = {m: clip_identities(v, ref) for m, v in lookups.items()}
-    _, sigs = identity_signals(identities, lookups, ref, sanctions_list=None)
+    _, sigs = identity_signals(identities, lookups, ref, sanctions_list=None, hull_imos={rec["imo"]})
     points: Dict[str, int] = Counter()
     for signal in sigs:
         points[signal.code] += signal.points
-    return min(100, sum(points.values())), dict(points), unavailable_at_reference
+    current = active_at(identities, ref)
+    return min(100, sum(points.values())), dict(points), unavailable_at_reference, current.flag if current else None
 
 
 def score_record(rec: dict) -> Tuple[int, Dict[str, int]]:
     """Identity-only score at the reference date; returns score and points by code."""
-    score, points, _ = _score_record(rec)
+    score, points, _, _ = _score_record(rec)
     return score, points
 
 
@@ -159,12 +163,14 @@ def evaluate(data: dict, *, reviewed_sample: bool = False) -> dict:
         seen.add(rec["imo"])
     missing = 0
     unavailable = {label: 0 for label in groups}
+    flags = {label: Counter() for label in groups}
     for rec in data["records"]:
-        score, points, no_identity_at_reference = _score_record(rec)
+        score, points, no_identity_at_reference, flag = _score_record(rec)
         if not rec["identities"]:
             missing += 1
             continue
         groups[rec["label"]].append((score, points))
+        flags[rec["label"]][flag or "unknown"] += 1
         unavailable[rec["label"]] += int(no_identity_at_reference)
     pos = [s for s, _ in groups["sanctioned"]]
     neg = [s for s, _ in groups["control"]]
@@ -203,7 +209,35 @@ def evaluate(data: dict, *, reviewed_sample: bool = False) -> dict:
             **{k: sum(1 for _, p in g if sub(p)) / len(g) for k, g in groups.items()},
             "auc": auc([sub(p) for _, p in groups["sanctioned"]], [sub(p) for _, p in groups["control"]]),
         }
+    out["single_rule_auc"] = {
+        c: auc([p.get(c, 0) for _, p in groups["sanctioned"]], [p.get(c, 0) for _, p in groups["control"]])
+        for c in codes
+    }
+    if "FLAG_CHANGE" in codes:
+        out["flag_change_minus_total_ci95"] = paired_bootstrap_difference(
+            [(p.get("FLAG_CHANGE", 0), s) for s, p in groups["sanctioned"]],
+            [(p.get("FLAG_CHANGE", 0), s) for s, p in groups["control"]],
+        )
+    out["reference_flags"] = {k: dict(v.most_common(10)) for k, v in flags.items()}
+    out["grey_or_black_flag_share"] = {
+        k: sum(n for f, n in v.items() if flag_tier(f) in ("grey", "black")) / max(1, len(groups[k]))
+        for k, v in flags.items()
+    }
     return out
+
+
+def paired_bootstrap_difference(
+    pos: Sequence[Tuple[float, float]], neg: Sequence[Tuple[float, float]], n: int = 1000, seed: int = 20261026
+) -> Tuple[float, float]:
+    """95 % interval of AUC(first score) - AUC(second score), resampling vessels with both scores."""
+    rnd = random.Random(seed)
+    diffs = []
+    for _ in range(n):
+        p = [rnd.choice(pos) for _ in pos]
+        q = [rnd.choice(neg) for _ in neg]
+        diffs.append(auc([a for a, _ in p], [a for a, _ in q]) - auc([b for _, b in p], [b for _, b in q]))
+    diffs.sort()
+    return diffs[int(0.025 * n)], diffs[int(0.975 * n) - 1]
 
 
 def _code_order(code: str) -> int:
@@ -212,13 +246,21 @@ def _code_order(code: str) -> int:
     return ALL_CODES.index(code) if code in ALL_CODES else 99
 
 
+def _title(meta: dict) -> str:
+    """The bundled file's stored title says "shadow-fleet"; the labels are UK Russia-regime designations."""
+    title = meta.get("title", "")
+    if title == "UK-sanctioned shadow-fleet vessels vs. random ships":
+        return "UK Russia-regime sanctioned vessels vs. sampled controls"
+    return title
+
+
 def to_text(r: dict, meta: dict) -> str:
     pct = "{:.0%}".format
     lines = [
-        f"Evaluation: {meta.get('title', '')}",
+        f"Evaluation: {_title(meta)}",
         f"  {r['n']['sanctioned']} sanctioned vessels, {r['n']['control']} controls"
         + (f" ({r['missing']} records without GFW identity skipped)" if r["missing"] else ""),
-        "  identity checks only, at each vessel's reference date; SANCTIONED check off",
+        "  identity and flag/registry checks only (no tracks), at each vessel's reference date; SANCTIONED check off",
         "",
         f"AUC {r['auc']:.2f} (95% CI {r['auc_ci95'][0]:.2f}-{r['auc_ci95'][1]:.2f}); "
         f"median score {r['median']['sanctioned']:g} vs {r['median']['control']:g}",
@@ -230,7 +272,8 @@ def to_text(r: dict, meta: dict) -> str:
         lines.append(f"{label:28}{pct(a):>12}{pct(b):>10}")
 
     for name, v in r["levels"].items():
-        row(f"score >= {v['threshold']} ({name})", v["sanctioned_flagged"], v["controls_flagged"])
+        label = "HIGH" if name == "HIGH" else f"{name} or HIGH"
+        row(f"score >= {v['threshold']} ({label})", v["sanctioned_flagged"], v["controls_flagged"])
     lines.append("")
     for cat, v in r["categories"].items():
         row(f"any {CATEGORIES[cat][0].lower()} signal", v["sanctioned"], v["control"])
@@ -238,6 +281,19 @@ def to_text(r: dict, meta: dict) -> str:
     lines.append("")
     for code, v in r["signals"].items():
         row(code, v["sanctioned"], v["control"])
+    if "flag_change_minus_total_ci95" in r:
+        lo, hi = r["flag_change_minus_total_ci95"]
+        lines += [
+            "",
+            f"FLAG_CHANGE alone: AUC {r['single_rule_auc']['FLAG_CHANGE']:.2f}; difference to the total score "
+            f"{lo:+.3f} to {hi:+.3f} (paired 95% bootstrap)",
+        ]
+    if "grey_or_black_flag_share" in r:
+        share = r["grey_or_black_flag_share"]
+        lines.append(
+            f"Paris MoU grey/black flag at the reference date: {pct(share['sanctioned'])} sanctioned, "
+            f"{pct(share['control'])} controls"
+        )
     if any(r["unavailable_at_reference"].values()):
         missing_at_ref = r["unavailable_at_reference"]
         lines += [
@@ -249,6 +305,10 @@ def to_text(r: dict, meta: dict) -> str:
     if r.get("dataset_context"):
         context = r["dataset_context"]
         lines += ["", context["description"] + ":"]
-        lines += [f"  {field}: {context[field]}" for field in CONTEXT_FIELDS if field in context]
+        lines += [
+            f"  {'title (as stored)' if field == 'title' else field}: {context[field]}"
+            for field in CONTEXT_FIELDS
+            if field in context
+        ]
     lines += ["", r["interpretation"]]
     return "\n".join(lines)

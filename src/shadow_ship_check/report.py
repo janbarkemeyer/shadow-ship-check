@@ -90,11 +90,27 @@ def _excerpt(r: Report, h: str = "##") -> List[str]:
     return out + [""]
 
 
+_UNSCORED = ("not scored", "no additional", "(after reference date)", "outside the")
+_SCORED = ("(recent)", "<-- overlaps", "* ", "(within ")
+
+
+def _key_evidence(s) -> str:
+    """The evidence line that best explains the points (summaries show one line per signal)."""
+    lines = [e for e in s.evidence if not any(m in e for m in _UNSCORED)] or list(s.evidence)
+    preferred = [e for e in lines if any(m in e for m in _SCORED)]
+    if preferred:
+        return preferred[-1]  # evidence is chronological: the most recent scored line
+    if s.code == "CONCURRENT_IDENTITIES" and lines:
+        different = [e for e in lines if "likely a second transponder" not in e]
+        return (different if s.points > 5 and different else lines)[-1]
+    return lines[0] if lines else ""
+
+
 def _summary(r: Report, n: int = 3) -> List[str]:
     top = sorted((s for s in r.signals if s.points), key=lambda s: -s.points)[:n]
     if not top:
         return ["No scored signals.", ""]
-    return [f"- {_md(s.title)} (+{s.points}): {_md(s.evidence[0]) if s.evidence else ''}" for s in top] + [""]
+    return [f"- {_md(s.title)} (+{s.points}): {_md(_key_evidence(s))}" for s in top] + [""]
 
 
 def _notes(r: Report, h: str = "##") -> List[str]:
