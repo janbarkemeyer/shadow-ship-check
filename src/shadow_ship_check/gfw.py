@@ -108,6 +108,8 @@ def identities_from_entries(entries: list, dedupe: bool = True) -> List[Identity
     for entry in entries:
         if not isinstance(entry, dict):
             raise ValueError("Vessel search entries must be objects")
+        if not any(field in entry for field in ("registryInfo", "selfReportedInfo")):
+            raise ValueError("Vessel search entry has no recognised identity fields")
         for field in ("registryInfo", "selfReportedInfo"):
             rows = entry.get(field) if entry.get(field) is not None else []
             if not isinstance(rows, list) or any(not isinstance(r, dict) for r in rows):
@@ -167,9 +169,8 @@ def identities_from_entries(entries: list, dedupe: bool = True) -> List[Identity
                 for s in entry.get("selfReportedInfo") or []
             ):
                 continue
-            if not any(i.key == ident.key and i.imo == ident.imo for i in out.values()):
-                raw.append(ident)
-                _merge(out, replace(ident))
+            raw.append(ident)
+            _merge(out, replace(ident))
     if not dedupe:
         return sorted(raw, key=lambda i: i.start or _EPOCH)
     return sorted(out.values(), key=lambda i: i.start or _EPOCH)

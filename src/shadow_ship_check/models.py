@@ -47,6 +47,17 @@ class Identity:
     vessel_id: Optional[str] = None
     messages: Optional[int] = None
 
+    def __post_init__(self):
+        for value in (self.start, self.end):
+            if value is not None and (
+                not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None
+            ):
+                raise ValueError("Identity timestamps must include a timezone")
+        if self.start and self.end and self.start > self.end:
+            raise ValueError("Identity start must not be after its end")
+        if self.messages is not None and (type(self.messages) is not int or self.messages < 0):
+            raise ValueError("Identity messagesCounter must be a non-negative integer or null")
+
     @property
     def key(self) -> tuple:
         return (normalize_name(self.name), self.flag or "", self.mmsi or "")
@@ -76,8 +87,12 @@ class TrackPoint:
     segment: int = 0
 
     def __post_init__(self):
-        if not self.t.tzinfo:
+        if not isinstance(self.t, datetime) or self.t.tzinfo is None or self.t.utcoffset() is None:
             raise ValueError("Track timestamps must include a timezone")
+        if any(type(value) not in (int, float) for value in (self.lat, self.lon, self.speed)):
+            raise ValueError("Track coordinates and speed must be numbers, not booleans or strings")
+        if type(self.segment) is not int or self.segment < 0:
+            raise ValueError("Track segment must be a non-negative integer")
         if not (
             math.isfinite(self.lat) and -90 <= self.lat <= 90 and math.isfinite(self.lon) and -180 <= self.lon <= 180
         ):
@@ -87,9 +102,17 @@ class TrackPoint:
 
     @staticmethod
     def from_row(row: list) -> "TrackPoint":
+        if not isinstance(row, (list, tuple)) or len(row) not in (4, 5):
+            raise ValueError("Track rows must contain four or five values")
         ts, lat, lon, sp, *rest = row
+        if type(ts) not in (int, float) or not math.isfinite(ts):
+            raise ValueError("Track row timestamp must be a finite number")
+        try:
+            timestamp = datetime.fromtimestamp(ts, tz=timezone.utc)
+        except (ValueError, OverflowError, OSError) as exc:
+            raise ValueError("Track row timestamp is outside the supported range") from exc
         return TrackPoint(
-            t=datetime.fromtimestamp(ts, tz=timezone.utc),
+            t=timestamp,
             lat=lat,
             lon=lon,
             speed=sp,

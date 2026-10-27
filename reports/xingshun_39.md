@@ -27,6 +27,7 @@ Retrospective timestamp filter of the bundled snapshot. Current identity links, 
 
 - 51 track points inside the analysis window (101 loaded, 2 identity track(s)).
 - Timestamp filtering retains current identity links, registry matches and fixed 2025 flag weights; it does not reconstruct what was known at the cut-off.
+- Incident excerpt omitted: the reported time is after the timestamp cut-off.
 - SHUNXING39 without IMO is linked manually using later name and track evidence.
 
 ## Full data

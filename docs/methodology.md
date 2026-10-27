@@ -69,7 +69,7 @@ checks use the supplied identity tracks, which can include longer historical per
 | `SLOW_LOITERING` | ≥ 2 h at ≤ 3 kn; "slow moving" if the path rate is ≥ 0.5 nm/h | +10 per slow-moving run, max 20; stationary runs 0 | Anchoring is not scored because ports and anchorages look the same; a slow crossing of a mapped cable is scored by `CABLE_CROSSING_SLOW` |
 | `SPEED_DROP` | ≥ 1.5 h underway above 2 kn and below 60 % of the median of loaded AIS speeds ≥ 5 kn, with real movement (≥ 1 nm/h); needs ≥ 5 baseline points | +10 | A relative speed change; it does not identify the cause |
 | `ZIGZAG` | ≥ 4 positions within 6 h: path ≥ 5 nm, path ≥ 2.5 × net displacement, average ≤ 6 kn | +10 | Filters out fast ferry crossings; ordinary waiting and manoeuvring can still qualify |
-| `CABLE_CROSSING_SLOW` | The straight line between two positions (≤ 3 h apart) crosses a mapped cable or pipeline while the speed over ground is ≤ 70 % of the ship's median cruising speed (5 kn if unknown); lying still (< 1 kn) does not count | +20 | Uses the bundled OpenStreetMap layer; ships cross cables constantly, only slow crossings are listed |
+| `CABLE_CROSSING_SLOW` | The straight line between two positions (≤ 3 h apart) crosses a mapped cable or pipeline at a calculated speed over ground ≤ 70 % of the cruising median, or ≤ 5 kn without a baseline | +20 | Default routes are from OpenStreetMap. The baseline needs at least 5 loaded AIS speeds ≥ 5 kn. A pair is ignored as stationary only when the calculated rate and both AIS speeds are < 1 kn. Ships cross cables routinely; the cause is not established |
 
 Linked positions used to assess a gap must be reachable from both endpoints and along the selected
 path, using the existing handover allowance of 10 nm plus 15 kn times elapsed hours. The largest
@@ -123,6 +123,11 @@ with the cut-off stored per case). Identities that started later are dropped, la
 clipped, and tracks end at the cut-off. `ssc check --as-of` without a start/end window loads the
 preceding 30 days. If both `--end` and `--as-of` are supplied, their earlier value is the effective
 cut-off for tracks and identities. An earlier end is never extended by `--as-of`.
+Without `--as-of`, `--end` bounds movement checks but the full identity snapshot remains available;
+some identity rules can list later records with descriptive points. Loaded positions outside the
+movement window can also set the cruising-speed baseline. `--as-of` removes later context positions.
+An `--at` time at or before the cut-off retains its excerpt from the remaining positions. A later
+requested time is omitted with a note.
 
 This does not reconstruct the information available at that time. Identity links and registry
 matches come from the current GFW snapshot; the flag list was published in 2026; names and manually

@@ -12,8 +12,9 @@ identity changes reported around cable incidents. It runs explicit rules on data
 I compare five incident cases, three control vessels and a separate sample of 300 UK-sanctioned
 vessels against 300 controls.
 
-The results help prioritise research into a known ship or identity cluster. They do not establish
-intent, responsibility for damage or a probability of a future incident. HIGH means that several
+I use the reports to compare the recorded identities, tracks and rule evidence for a known ship
+or identity cluster. The bundled cases let me repeat that comparison offline. The results do not
+establish intent, responsibility for damage or a probability of a future incident. HIGH means that several
 rules fired; LOW can also reflect limited data.
 
 ![Xingshun 39: linked AIS identities](docs/img/xingshun39_handover.png)
@@ -85,7 +86,10 @@ ssc check 8358427 --as-of 2025-01-02T12:00 --also SHUNXING39
 
 With `--as-of` alone, the default window is the preceding 30 days. Times without an offset are UTC;
 times with an offset are converted to UTC. With both `--end` and `--as-of`, the earlier value is the
-effective cut-off. Install from this checkout with `pip install -e` as above;
+effective cut-off. `--end` alone sets the movement window; it does not remove later identity
+records. Use `--as-of` when both identity timestamps and positions must end at the cut-off.
+An `--at` time at or before that cut-off keeps its position excerpt; a later one is omitted with
+a note. Install from this checkout with `pip install -e` as above;
 the offline commands read the repository's `data/` folder. Built wheels include the same data.
 
 Example (`ssc case xingshun_39 --before-incident`, evidence shortened):

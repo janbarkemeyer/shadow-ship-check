@@ -120,6 +120,9 @@ def eval_block() -> str:
 at each reference date; current links and registry matches remain. Only identity checks run, with sanctions
 points switched off. One rule was revised while preparing the sanctioned sample, so this is not an untouched
 validation set. The comparison measures separation of these groups, not prediction of cable incidents.</p>
+<p>Identity records unavailable at the reference date: {r["unavailable_at_reference"]["sanctioned"]} sanctioned,
+{r["unavailable_at_reference"]["control"]} control vessels. These remain in the comparison at score 0;
+this is missing historical data, not evidence of an ordinary identity history.</p>
 <div class="stats">{"".join(f"<div class=stat><b>{a}</b><span>{esc(b)}</span></div>" for a, b in stats)}</div>
 <img class="fig" src="img/evaluation.png" alt="Score distribution of sanctioned vessels and random ships">
 <div class="wrap"><table><thead><tr><th>Signal</th><th class="num">sanctioned</th><th class="num">random ships</th></tr></thead>
@@ -144,8 +147,9 @@ subsea cable incidents in Taiwan and the Baltic Sea.</p>
 <p>I am a politics and economics student based in Taipei. I built Shadow Ship Check to investigate identity changes
 reported around cable incidents. It runs explicit rules on data from Global Fishing Watch and lists the records
 behind each result. <a href="{REPO}">Code and documentation on GitHub</a>.</p>
-<p>The results help prioritise research into a known ship or identity cluster. They do not establish intent,
-responsibility for damage or a probability of a future incident. HIGH means several rules fired; LOW can also
+<p>I use the reports to compare recorded identities, tracks and rule evidence for a known ship or identity cluster.
+The bundled cases let me repeat that comparison offline. The results do not establish intent, responsibility
+for damage or a probability of a future incident. HIGH means several rules fired; LOW can also
 reflect limited data.</p>
 
 <img class="fig" src="img/xingshun39_handover.png" alt="Map of two AIS identities of Xingshun 39 north of Keelung">

@@ -53,6 +53,13 @@ cable intersection check rejects tracks or routes spanning the date line. A cros
 cable vertex counts when the route passes from one side of the track to the other; a tangent touch,
 collinear overlap or contact only at a track endpoint does not count as a proper crossing.
 
+## Time windows
+
+`--start` and `--end` select the movement window. The client loads additional track context for
+gap checks and cruising-speed baselines. Identity history has separate look-back rules; an end
+date alone does not remove later identities. `--as-of` clips identity and track timestamps,
+including later context, but retains current links and registry matches.
+
 ## Known limitations
 
 * Simplified tracks. On open water the public track often has one point every 60–90 minutes;

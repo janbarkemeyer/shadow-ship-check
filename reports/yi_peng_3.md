@@ -21,6 +21,7 @@ Retrospective timestamp filter of the bundled snapshot. Current identity links, 
 
 - 13 track points inside the analysis window (118 loaded, 1 identity track(s)).
 - Timestamp filtering retains current identity links, registry matches and fixed 2025 flag weights; it does not reconstruct what was known at the cut-off.
+- Incident excerpt omitted: the reported time is after the timestamp cut-off.
 
 ## Full data
 

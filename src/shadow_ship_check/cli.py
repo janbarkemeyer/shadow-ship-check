@@ -5,12 +5,14 @@ from __future__ import annotations
 import argparse
 import http.client
 import json
+import os
 import sys
 import urllib.error
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List
+from urllib.parse import quote
 
 from . import __version__, data_path, watchlist
 from .analyze import analyze, analyze_fixture, load_fixture
@@ -38,9 +40,38 @@ def _sanctions(args):
     return None if args.no_sanctions else watchlist.load()
 
 
+def _same_file(first: Path, second: Path) -> bool:
+    return first.resolve() == second.resolve() or (first.exists() and second.exists() and first.samefile(second))
+
+
+def _check_output_paths(outputs, inputs=()) -> None:
+    paths = [Path(p) for p in outputs if p]
+    for n, path in enumerate(paths):
+        if any(_same_file(path, other) for other in paths[:n]):
+            raise ValueError("Output paths must refer to different files")
+        if any(_same_file(path, Path(source)) for source in inputs):
+            raise ValueError(f"Output path would overwrite an input file: {path}")
+
+
+def _layer_inputs(args) -> List[Path]:
+    paths = []
+    if not args.no_cables:
+        for path in map(Path, args.cables or [data_path() / "cables"]):
+            paths.extend(sorted(path.glob("*.geojson")) if path.is_dir() else [path])
+    if not args.no_sanctions:
+        paths.append(watchlist.BUNDLED)
+    return paths
+
+
+def _case_context(name: str, output_directory: Path) -> str:
+    source = data_path().parent / "cases" / f"{name}.md"
+    if source.is_file():
+        return quote(Path(os.path.relpath(source.resolve(), output_directory.resolve())).as_posix(), safe="/")
+    return f"https://github.com/janbarkemeyer/shadow-ship-check/blob/v{__version__}/cases/{name}.md"
+
+
 def _emit(report, args, title=None) -> None:
-    if args.json and args.md and Path(args.json).resolve() == Path(args.md).resolve():
-        raise ValueError("Markdown and JSON output paths must differ")
+    _check_output_paths([args.json, args.md])
     if args.json:
         Path(args.json).write_text(to_json(report), encoding="utf-8")
     if args.md:
@@ -59,7 +90,9 @@ def _same_hull(identities: List[Identity], query: str) -> List[Identity]:
     q = query.strip()
     imos = {i.imo for i in identities if q in (i.imo, i.mmsi) and i.imo}
     if len(imos) > 1:
-        raise ValueError("This identifier matches multiple IMO numbers; check each IMO separately")
+        raise ValueError(
+            f"This identifier matches multiple IMO numbers: {', '.join(sorted(imos))}; check each IMO separately"
+        )
     return [i for i in identities if q in (i.imo, i.mmsi) or (i.imo and i.imo in imos)]
 
 
@@ -83,6 +116,7 @@ def cmd_check(args) -> int:
         return 2
     pad = timedelta(days=args.context_days)
     fetch_end = min(end + pad, as_of) if as_of else end + pad
+    _check_output_paths([args.json, args.md], _layer_inputs(args))
     client = GFWClient()
     raw = _same_hull(identities_from_entries(client.search_raw(args.query), dedupe=False), args.query)
     if not raw:
@@ -126,11 +160,16 @@ def cmd_check(args) -> int:
     # identities linked by hand (e.g. a name variant without IMO)
     linked = []
     for q in args.also or []:
+        q = q.strip()
         hits = [
             i
             for i in identities_from_entries(client.search_raw(q), dedupe=False)
             if q in (i.mmsi, i.imo) or i.key[0] == normalize_name(q)
         ]
+        if not hits:
+            raise ValueError(
+                f"No exact identity match for --also {q!r}; use an IMO, MMSI or exact normalised name (see ssc search)"
+            )
         linked += hits
         gfw_ids.update({i.vessel_id: i for i in hits if overlaps_period(i)})
 
@@ -188,6 +227,9 @@ def cmd_case(args) -> int:
     if args.name == "all" and args.before_incident:
         raise ValueError("case all already compares both views; --before-incident requires one case name")
     names = list(ALL) if args.name == "all" else [args.name]
+    outputs = [Path(args.md) / f"{name}.md" for name in names] if args.name == "all" and args.md else [args.md]
+    inputs = [Path(args.fixtures) / f"{name}.json" for name in names] + _layer_inputs(args)
+    _check_output_paths([args.json, *outputs], inputs)
     cables = _cables(args)
     listing = _sanctions(args)
     if len(names) > 1:
@@ -207,7 +249,7 @@ def cmd_case(args) -> int:
         before = analyze_fixture(case, fixture, cables, True, listing)
         if args.md:
             Path(args.md).mkdir(parents=True, exist_ok=True)
-            case_file = f"../cases/{n}.md" if n in CASES else None
+            case_file = _case_context(n, Path(args.md)) if n in CASES else None
             text = to_markdown_case(full, before, case["title"], case_file)
             Path(args.md, f"{n}.md").write_text(text, encoding="utf-8")
         scored = ", ".join(f"{s.code}+{s.points}" for s in before.signals if s.points)
@@ -224,8 +266,9 @@ def cmd_case(args) -> int:
 def cmd_eval(args) -> int:
     from . import evaluate
 
+    _check_output_paths([args.json], [Path(args.data) if args.data else evaluate.BUNDLED])
     data = evaluate.load(Path(args.data)) if args.data else evaluate.load()
-    result = evaluate.evaluate(data)
+    result = evaluate.evaluate(data, reviewed_sample=not bool(args.data))
     if args.json:
         Path(args.json).write_text(json.dumps(result, indent=2), encoding="utf-8")
     print(evaluate.to_text(result, data.get("meta", {})))

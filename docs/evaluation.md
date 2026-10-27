@@ -18,8 +18,9 @@ ssc eval
 | Reference date | Designation date | A designation date drawn from the sanctioned sample |
 | Data | GFW identity search by IMO, by every MMSI and by the latest name | same |
 
-* Only identity history recorded before the reference date counts (`clip_identities`, the same
-  mechanism as the pre-incident view of the cases).
+* Identity timestamps are clipped at the reference date (`clip_identities`, the same mechanism
+  as the pre-incident view of the cases). Undated records remain available to rules that do not
+  require a dated observation; filtering does not establish that their contents were known then.
 * Only the identity checks run: there are no tracks, so the behaviour group is empty.
 * The `SANCTIONED` check is switched off; otherwise the test would be circular.
 * The thresholds were not changed after the control vessels were scored. One rule
@@ -43,6 +44,11 @@ AUC 0.83 (95 % bootstrap interval 0.80–0.86) measures how often a sanctioned v
 control, counting tied scores as half a win. The bootstrap resamples vessels within each group
 1,000 times with seed 20261026. It does not account for operator clusters, selection bias, uncertain
 labels or hindsight in the source data.
+
+Control IMO 9783837 has no identity records left after filtering at 9 May 2025. It remains in
+the comparison with score 0, so both groups still contain 300 vessels. I report this missing
+pre-reference basis separately; that LOW result does not demonstrate an ordinary identity history.
+The sample and its scores have not been changed to remove this case.
 
 Share of ships with each signal:
 
@@ -98,7 +104,11 @@ list, 51 % of the sanctioned ships have a selected grey or black flag, against 1
 
 ## Reproduce
 
-`ssc eval --json metrics.json` recomputes the reported metrics from the bundled file. The collection itself ran
+`ssc eval --json metrics.json` recomputes the reported metrics from the bundled file. The export
+also carries the interpretation and `unavailable_at_reference` counts by group.
+These count nonempty raw answers with no identities left after the timestamp filter; those vessels
+remain in the comparison at score 0. The separate `missing` count covers empty raw answers, which
+are excluded. These are completeness checks, not additional points. The collection itself ran
 in a browser session against the GFW API; the record format matches what `ssc check` gathers, so a
 new sample can be scored the same way (`ssc eval --data my_sample.json.gz`). The collection script
 and full request log are not bundled, so the acquisition and sampling cannot be rerun from the

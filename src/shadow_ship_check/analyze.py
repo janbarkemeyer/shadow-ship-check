@@ -116,9 +116,11 @@ def analyze(
         raise ValueError("Analysis window must start before its end/cut-off")
     if excerpt_hours < 0:
         raise ValueError("Excerpt hours must be non-negative")
+    omitted_excerpt = False
     if as_of:
         if window:
             as_of = min(as_of, window[1])
+        omitted_excerpt = bool(incident_time and incident_time > as_of)
         # pre-incident view: drop everything GFW recorded after ``as_of``
         identities = clip_identities(identities, as_of)
         mmsi_lookups = {m: clip_identities(v, as_of) for m, v in (mmsi_lookups or {}).items()}
@@ -128,7 +130,8 @@ def analyze(
         fetched = {k: (a, min(b, as_of)) for k, (a, b) in (fetched or {}).items()}
         start = window[0] if window and window[0] < as_of else as_of - timedelta(days=3)
         window = (start, as_of)
-        incident_time = None
+        if omitted_excerpt:
+            incident_time = None
     ref = window[1] if window else as_of
     identities, sigs = identity_signals(identities, mmsi_lookups, ref, sanctions_list)
     if parallel and len(parallel) > 1:
@@ -167,6 +170,8 @@ def analyze(
             "Timestamp filtering retains current identity links, registry matches and fixed 2025 flag weights; "
             "it does not reconstruct what was known at the cut-off."
         )
+    if omitted_excerpt:
+        notes.append("Incident excerpt omitted: the reported time is after the timestamp cut-off.")
     if not cables or not cables.lines:
         notes.append("No cable layer: cable crossings were not checked.")
     excerpt = []
